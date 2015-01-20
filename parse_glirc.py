@@ -117,6 +117,7 @@ class glirc_event(object):
                 self.event_lat, self.event_lon = [float(x) for x in
                                                   obj['location'].split(',')[:2]]
             except ValueError:
+                print('bad location')
                 pass
         self.eventId = obj['id']
 
@@ -186,6 +187,7 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                                     except ValueError:
                                         pass
                         except Exception as htexc:
+                            print('bad url %s' % current_event.event_url)
                             pass
                             #print("Exception:", htexc, current_event.event_url, current_event.print_event())
                     dt = datetime.datetime(year=year, month=month, day=day, hour=9, minute=0, tzinfo=tzobj)

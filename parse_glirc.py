@@ -159,7 +159,11 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                 elif len(ent.split()) > 0 and ent.split()[0]in months_long:
                     dstr = ent.replace('|', '').strip()
                     month = months_long.index(dstr.split()[0]) + 1
-                    day = int(dstr.split()[1].replace(',', ''))
+                    try:
+                        day = int(dstr.split()[1].replace(',', ''))
+                    except ValueError:
+                        current_event.event_name = dstr
+                        continue
                     year = int(dstr.split()[2])
                     hour = 9
                     minute = 0

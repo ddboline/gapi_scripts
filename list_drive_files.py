@@ -8,14 +8,15 @@ from apiclient import sample_tools
 
 class gdrive_instance(object):
     """ class to make use of google python api """
-    list_of_keys = {}
-    list_of_mimetypes = {}
-    items_processed = 0
-    list_of_folders = {}
-    list_of_items = {}
 
     def __init__(self, app='drive', version='v2', number_to_process=-1):
         """ init function """
+
+        self.list_of_keys = {}
+        self.list_of_mimetypes = {}
+        self.items_processed = 0
+        self.list_of_folders = {}
+        self.list_of_items = {}
 
         curdir = os.curdir
 
@@ -161,7 +162,7 @@ def download_or_list_files(gdrive, do_download=False, do_export=True):
 
 if __name__ == '__main__':
     cmd = 'list'
-    search_string = None
+    search_strings = []
     number_to_list = 100
     COMMANDS = ['list', 'sync', 'search', 'download']
     for arg in os.sys.argv:
@@ -176,14 +177,17 @@ if __name__ == '__main__':
             try:
                 number_to_list = int(arg)
             except ValueError:
-                search_string = arg
+                search_strings.append(arg)
                 pass
 
     if cmd == 'list':
         list_files(do_download=False, number_to_list=number_to_list)
     elif cmd == 'search':
-        list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
+        if search_strings:
+            for search_string in search_strings:
+                list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
     elif cmd == 'sync':
         list_files(do_download=True, number_to_list=-1)
     elif cmd == 'download':
-        download_file_by_id(fid=search_string)
+        for search_string in search_strings:
+            download_file_by_id(fid=search_string)

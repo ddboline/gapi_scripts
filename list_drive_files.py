@@ -166,7 +166,17 @@ class gdrive_instance(object):
                     ptitle_list.append(ptitle)
                     pid = ppid
                 else:
-                    pid = None
+                    request = self.service.files().get(fileId=pid)
+                    response = request.execute()
+                    if response:
+                        title = response['title']
+                        ptitle_list.append(title)
+                        if len(response['parents'])>0:
+                            pid = response['parents'][0]['id']
+                        else:
+                            pid = None
+                    else:
+                        pid = None
             ptitle_list.append('DriveExport')
             exportfile = '/'.join(ptitle_list[::-1])
             print(itid, exportfile)

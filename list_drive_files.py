@@ -26,7 +26,7 @@ class gdrive_instance(object):
         self.number_to_process = number_to_process
         #os.chdir(curdir)
 
-    def process_item(self, it, output=None):
+    def process_item(self, it, output=None, list_dirs=False):
         if self.number_to_process > 0 and self.items_processed > self.number_to_process:
             return
         self.items_processed += 1
@@ -43,7 +43,7 @@ class gdrive_instance(object):
                 if it['parents']:
                     pid = it['parents'][0]['id']
                 self.list_of_folders[it['id']] = [it['title'], pid]
-        else:
+        elif not list_dirs:
             if it['id'] not in self.list_of_items:
                 pid = None
                 if it['parents']:
@@ -74,120 +74,159 @@ class gdrive_instance(object):
                     self.list_of_items[it['id']] = [it['title'], fext, pid, dlink, isExport, md5chksum]
 
 
-    def process_response(self, response, output=None):
+    def process_response(self, response, output=None, list_dirs=False):
         ### mimeType, parents
         if self.number_to_process > 0 and self.items_processed > self.number_to_process:
             return 0
         for it in response['items']:
-            self.process_item(it, output)
+            self.process_item(it, output, list_dirs)
 
+    def upload_file(self, filelist, parent_id=None):
+        for fname in filelist:
+            fn = fname.split('/')[-1]
+    
+            body_obj = {'title': fn,}
 
-def download_file_by_id(fid=None):
-    if not fid:
-        return
-    """ function to list files in drive """
-    # service, flags = sample_tools.init([], 'drive', 'v2', __doc__, __file__, scope='https://www.googleapis.com/auth/drive')
-
-    gdrive = gdrive_instance()
-
-    request = gdrive.service.files().get(fileId=fid)
-    response = request.execute()
-
-    gdrive.process_item(response)
-    download_or_list_files(gdrive, do_download=True, do_export=False)
-
-def list_files(do_download=False, number_to_list=100, searchstr=None):
-    """ function to list files in drive """
-    # service, flags = sample_tools.init([], 'drive', 'v2', __doc__, __file__, scope='https://www.googleapis.com/auth/drive')
-
-    gdrive = gdrive_instance(number_to_process=number_to_list)
-    qstr = None
-    if searchstr:
-        qstr = 'title contains "%s"' % searchstr
-
-    request = gdrive.service.files().list(q=qstr)
-    response = request.execute()
-
-    new_request = True
-    while new_request:
-        if gdrive.process_response(response) == 0:
-            break
-        print('N processed: %d' % gdrive.items_processed)
-
-        new_request = gdrive.service.files().list_next(request, response)
-        if not new_request:
-            break
-        request = new_request
-        try:
+            request = self.service.files().insert(body=body_obj, media_body=fname)
             response = request.execute()
-        except apiclient.errors.HttpError:
-            time.sleep(5)
+    
+            print('%s %s %s' % (response['id'], response['md5Checksum'], response['title'], ))
+    
+            request = self.service.files().update(fileId=response['id'], addParents=parent_id)
             response = request.execute()
-    download_or_list_files(gdrive, do_download)
 
-def download_or_list_files(gdrive, do_download=False, do_export=True):
-    for itid in gdrive.list_of_items:
-        title, fext, pid, dlink, isExport, md5chksum = gdrive.list_of_items[itid]
-        if (do_export and not isExport) and do_download:
-            continue
-        if not fext:
-            print(title, pid, dlink)
-        elif fext not in title:
-            title = '.'.join([title,fext])
-        ptitle_list = [title]
-        while pid:
-            if pid in gdrive.list_of_folders:
-                ptitle, ppid = gdrive.list_of_folders[pid]
-                ptitle_list.append(ptitle)
-                pid = ppid
-            else:
-                pid = None
-        ptitle_list.append('DriveExport')
-        exportfile = '/'.join(ptitle_list[::-1])
-        print(itid, exportfile)
-        if not do_download:
-            continue
-        if '/' in exportfile:
-            exportpath = '/'.join(exportfile.split('/')[:-1])
-            if not os.path.exists(exportpath):
-                os.makedirs(exportpath)
-        resp, f = gdrive.service._http.request(dlink)
-        if resp['status'] != '200':
-            print(dlink)
-            print('something bad happened %s' % resp)
-            continue
-        with open(exportfile, 'wb') as outfile:
-            for line in f:
-                outfile.write(line)
+    def get_parents(self, fids=None):
+        """ function to list files in drive """
+        if not fids:
+            return
+        
+        parents_output = []
+        for fid in fids:
+            request = self.service.files().get(fileId=fid)
+            response = request.execute()
+            parents_output.extend(response['parents'])
+        return parents_output
+
+    def download_file_by_id(self, fid=None):
+        """ function to list files in drive """
+        if not fid:
+            return
+
+        request = self.service.files().get(fileId=fid)
+        response = request.execute()
+    
+        self.process_item(response)
+        self.download_or_list_files(do_download=True, do_export=False)
+
+    def list_files(self, do_download=False, number_to_list=100, searchstr=None, list_dirs=False):
+        """ function to list files in drive """
+        qstr = None
+        if searchstr:
+            qstr = 'title contains "%s"' % searchstr
+    
+        request = self.service.files().list(q=qstr, maxResults=number_to_list)
+        response = request.execute()
+    
+        new_request = True
+        while new_request:
+            if self.process_response(response, list_dirs=list_dirs) == 0:
+                break
+            print('N processed: %d' % self.items_processed)
+    
+            new_request = self.service.files().list_next(request, response)
+            if not new_request:
+                break
+            request = new_request
+            try:
+                response = request.execute()
+            except apiclient.errors.HttpError:
+                time.sleep(5)
+                response = request.execute()
+        self.download_or_list_files(do_download, list_dirs=list_dirs)
+
+    def download_or_list_files(self, do_download=False, do_export=True, list_dirs=False):
+        if list_dirs:
+            for did in self.list_of_folders:
+                title, pid = self.list_of_folders[did]
+                print('%s %s %s' % (did, title, pid))
+            return
+        
+        for itid in self.list_of_items:
+            title, fext, pid, dlink, isExport, md5chksum = self.list_of_items[itid]
+            if (do_export and not isExport) and do_download:
+                continue
+            if not fext:
+                print(title, pid, dlink)
+            elif fext not in title:
+                title = '.'.join([title,fext])
+            ptitle_list = [title]
+            while pid:
+                if pid in self.list_of_folders:
+                    ptitle, ppid = self.list_of_folders[pid]
+                    ptitle_list.append(ptitle)
+                    pid = ppid
+                else:
+                    pid = None
+            ptitle_list.append('DriveExport')
+            exportfile = '/'.join(ptitle_list[::-1])
+            print(itid, exportfile)
+            if not do_download:
+                continue
+            if '/' in exportfile:
+                exportpath = '/'.join(exportfile.split('/')[:-1])
+                if not os.path.exists(exportpath):
+                    os.makedirs(exportpath)
+            resp, f = self.service._http.request(dlink)
+            if resp['status'] != '200':
+                print(dlink)
+                print('something bad happened %s' % resp)
+                continue
+            with open(exportfile, 'wb') as outfile:
+                for line in f:
+                    outfile.write(line)
 
 if __name__ == '__main__':
     cmd = 'list'
     search_strings = []
+    parent_directory = None
     number_to_list = 100
-    COMMANDS = ['list', 'sync', 'search', 'download']
+    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories', 'parent']
     for arg in os.sys.argv:
         if 'list_drive_files.py' in arg:
             continue
         elif arg in ['h', '--help', '-h']:
-            print('list_drive_files <%s> <file/key>' % '|'.join(COMMANDS))
+            print('list_drive_files <%s> <file/key> directory=<id of directory>' % '|'.join(COMMANDS))
             exit(0)
         elif arg in COMMANDS:
             cmd = arg
+        elif 'directory=' in arg:
+            parent_directory = arg.replace('directory=', '')
         else:
             try:
                 number_to_list = int(arg)
             except ValueError:
                 search_strings.append(arg)
                 pass
-
+    gdrive = gdrive_instance(number_to_process=number_to_list)
     if cmd == 'list':
-        list_files(do_download=False, number_to_list=number_to_list)
+        gdrive.list_files(do_download=False, number_to_list=number_to_list)
     elif cmd == 'search':
         if search_strings:
             for search_string in search_strings:
-                list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
+                gdrive.list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
     elif cmd == 'sync':
-        list_files(do_download=True, number_to_list=-1)
+        gdrive.list_files(do_download=True, number_to_list=-1)
+    elif cmd == 'directories':
+        if search_strings:
+            for search_string in search_strings:
+                gdrive.list_files(do_download=False, number_to_list=100, searchstr=search_string, list_dirs=True)
     elif cmd == 'download':
         for search_string in search_strings:
-            download_file_by_id(fid=search_string)
+            gdrive.download_file_by_id(fid=search_string)
+    elif cmd == 'upload':
+        print(number_to_list, search_strings)
+        gdrive.upload_file(filelist=search_strings, parent_id=parent_directory)
+    elif cmd == 'parent':
+        print(number_to_list, search_strings)
+        for parent in gdrive.get_parents(fids=search_strings):
+            print(parent['id'])

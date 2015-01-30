@@ -123,8 +123,11 @@ class gdrive_instance(object):
         qstr = None
         if searchstr:
             qstr = 'title contains "%s"' % searchstr
-    
-        request = self.service.files().list(q=qstr, maxResults=number_to_list)
+        
+        if number_to_list > 0:
+            request = self.service.files().list(q=qstr, maxResults=number_to_list)
+        else:
+            request = self.service.files().list(q=qstr)
         response = request.execute()
     
         new_request = True

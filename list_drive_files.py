@@ -220,6 +220,8 @@ if __name__ == '__main__':
             except ValueError:
                 search_strings.append(arg)
                 pass
+    if cmd == 'sync':
+        number_to_list = -1
     gdrive = gdrive_instance(number_to_process=number_to_list)
     if cmd == 'list':
         gdrive.list_files(do_download=False, number_to_list=number_to_list)
@@ -228,7 +230,7 @@ if __name__ == '__main__':
             for search_string in search_strings:
                 gdrive.list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
     elif cmd == 'sync':
-        gdrive.list_files(do_download=True, number_to_list=-1)
+        gdrive.list_files(do_download=True, number_to_list=number_to_list)
     elif cmd == 'directories':
         if search_strings:
             for search_string in search_strings:

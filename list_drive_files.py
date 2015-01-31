@@ -91,8 +91,14 @@ class gdrive_instance(object):
             response = request.execute()
     
             print('%s %s %s' % (response['id'], response['md5Checksum'], response['title'], ))
-    
-            request = self.service.files().update(fileId=response['id'], addParents=parent_id)
+            
+            request = self.service.parents().list(fileId=response['id'])
+            response = request.execute()
+            current_pid = response['items']['id']
+
+            print(parent_id, current_pid)
+
+            request = self.service.files().update(fileId=response['id'], addParents=parent_id, removeParents=[current_pid])
             response = request.execute()
 
     def get_parents(self, fids=None):

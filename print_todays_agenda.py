@@ -64,7 +64,7 @@ def print_todays_agenda():
                 continue
             elif e.event_time > datetime.datetime.now(tzobj):
                 outstr.append(e.print_event())
-        return '\n'.join(outstr)
+        return ('\n'.join(outstr)).encode(errors='ignore')
 
     cachefile = '/tmp/.todays_agenda.tmp'
     def convert_time_date(st):

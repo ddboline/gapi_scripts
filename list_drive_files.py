@@ -68,7 +68,7 @@ class gdrive_instance(object):
                         dlink = it['exportLinks'][elmime[0]]
                         fext = dlink.split('exportFormat=')[1]
                     else:
-                        print(it['title'], it['mimeType'], it['exportLinks'])
+                        print('not sure what happened...', it['title'], it['mimeType'], it['exportLinks'])
                         raw_input()
                 if fext and pid and dlink:
                     self.list_of_items[it['id']] = [it['title'], fext, pid, dlink, isExport, md5chksum]
@@ -81,7 +81,33 @@ class gdrive_instance(object):
         for it in response['items']:
             self.process_item(it, output, list_dirs)
 
-    def upload_file(self, filelist, parent_id=None):
+    def upload_file(self, filelist, parent_id=None, directory_name=None):
+        output = []
+        if directory_name:
+            qstr = 'title contains "%s"' % directory_name
+            request = self.service.files().list(q=qstr, maxResults=10)
+            response = request.execute()
+        
+            new_request = True
+            while new_request:
+                if self.process_response(response, list_dirs=True) == 0:
+                    break
+                print('N processed: %d' % self.items_processed)
+        
+                new_request = self.service.files().list_next(request, response)
+                if not new_request:
+                    break
+                request = new_request
+                try:
+                    response = request.execute()
+                except apiclient.errors.HttpError:
+                    time.sleep(5)
+                    response = request.execute()
+            for did in self.list_of_folders:
+                title, pid = self.list_of_folders[did]
+                parent_id = did
+                break
+
         for fname in filelist:
             fn = fname.split('/')[-1]
     
@@ -96,14 +122,15 @@ class gdrive_instance(object):
             request = self.service.parents().list(fileId=fid)
             response = request.execute()
             
-            print(response['items'])
+            output.append('%s' % response['items'])
             
             current_pid = response['items'][0]['id']
 
-            print(parent_id, current_pid)
+            output.append('%s %s' % (parent_id, current_pid))
 
             request = self.service.files().update(fileId=fid, addParents=parent_id, removeParents=current_pid)
             response = request.execute()
+        return '\n'.join(output)
 
     def get_parents(self, fids=None):
         """ function to list files in drive """
@@ -155,14 +182,15 @@ class gdrive_instance(object):
             except apiclient.errors.HttpError:
                 time.sleep(5)
                 response = request.execute()
-        self.download_or_list_files(do_download, list_dirs=list_dirs)
+        return self.download_or_list_files(do_download, list_dirs=list_dirs)
 
     def download_or_list_files(self, do_download=False, do_export=True, list_dirs=False):
+        output = []
         if list_dirs:
             for did in self.list_of_folders:
                 title, pid = self.list_of_folders[did]
-                print('%s %s %s' % (did, title, pid))
-            return
+                output.append('%s %s %s' % (did, title, pid))
+            return '\n'.join(output)
         
         for itid in self.list_of_items:
             title, fext, pid, dlink, isExport, md5chksum = self.list_of_items[itid]
@@ -192,7 +220,7 @@ class gdrive_instance(object):
                         pid = None
             ptitle_list.append('DriveExport')
             exportfile = '/'.join(ptitle_list[::-1])
-            print(itid, exportfile)
+            output.append('%s %s' % (itid, exportfile))
             if not do_download:
                 continue
             if '/' in exportfile:
@@ -207,6 +235,7 @@ class gdrive_instance(object):
             with open(exportfile, 'wb') as outfile:
                 for line in f:
                     outfile.write(line)
+        return '\n'.join(output)
 
 if __name__ == '__main__':
     cmd = 'list'
@@ -234,23 +263,23 @@ if __name__ == '__main__':
         number_to_list = -1
     gdrive = gdrive_instance(number_to_process=number_to_list)
     if cmd == 'list':
-        gdrive.list_files(do_download=False, number_to_list=number_to_list)
+        print(gdrive.list_files(do_download=False, number_to_list=number_to_list))
     elif cmd == 'search':
         if search_strings:
             for search_string in search_strings:
-                gdrive.list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list)
+                print(gdrive.list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list))
     elif cmd == 'sync':
-        gdrive.list_files(do_download=True, number_to_list=number_to_list)
+        print(gdrive.list_files(do_download=True, number_to_list=number_to_list))
     elif cmd == 'directories':
         if search_strings:
             for search_string in search_strings:
-                gdrive.list_files(do_download=False, number_to_list=100, searchstr=search_string, list_dirs=True)
+                print(gdrive.list_files(do_download=False, number_to_list=100, searchstr=search_string, list_dirs=True))
     elif cmd == 'download':
         for search_string in search_strings:
             gdrive.download_file_by_id(fid=search_string)
     elif cmd == 'upload':
         print(number_to_list, search_strings)
-        gdrive.upload_file(filelist=search_strings, parent_id=parent_directory)
+        gdrive.upload_file(filelist=search_strings, directory_name=parent_directory)
     elif cmd == 'parent':
         print(number_to_list, search_strings)
         for parent in gdrive.get_parents(fids=search_strings):

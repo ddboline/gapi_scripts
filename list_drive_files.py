@@ -81,6 +81,10 @@ class gdrive_instance(object):
         for it in response['items']:
             self.process_item(it, output, list_dirs)
 
+    def delete_file(self, fileid):
+        request = self.service.files().delete(fileId=fileid)
+        response = request.execute()
+    
     def upload_file(self, filelist, parent_id=None, directory_name=None):
         output = []
         if directory_name:
@@ -109,6 +113,9 @@ class gdrive_instance(object):
                 break
 
         for fname in filelist:
+            if not os.path.exists(fname):
+                print('File %s not found, try using absolute path!' % fname)
+                continue
             fn = fname.split('/')[-1]
     
             body_obj = {'title': fn,}
@@ -242,7 +249,7 @@ if __name__ == '__main__':
     search_strings = []
     parent_directory = None
     number_to_list = 100
-    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories', 'parent']
+    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories', 'parent', 'delete']
     for arg in os.sys.argv:
         if 'list_drive_files.py' in arg:
             continue
@@ -284,3 +291,5 @@ if __name__ == '__main__':
         print(number_to_list, search_strings)
         for parent in gdrive.get_parents(fids=search_strings):
             print(parent['id'])
+    elif cmd == 'delete':
+        gdrive.delete_file(fileid=search_strings[0])

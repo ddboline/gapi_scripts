@@ -57,7 +57,6 @@ class nycruns_event(object):
         else:
             if partial_match:
                 if sum(comp_list) > partial_match:
-                    # print(self.event_desc, obj.event_desc)
                     return True
             return False
 
@@ -136,25 +135,27 @@ class nycruns_event(object):
         print('\n'.join(ostr))
 
 def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
-    f = urlopen(url)
+    inurl = urlopen(url)
 
-    while True:
-        line = next(f)
-        if 'class="event"' in line:
-            break
+    current_event = None
     event_buffer = []
-    current_event = nycruns_event()
-    while True:
-        line = next(f)
+    for line in urlopen(url):
+        if 'class="event"' in line:
+            current_event = nycruns_event()
+        if not current_event:
+            continue
+        else:
+            event_buffer.append(line.strip())
+
         if '</li>' in line:
-            event_buffer = ''.join(event_buffer)
+            event_string = ''.join(event_buffer)
             for ch in ['div', 'a']:
-                event_buffer = event_buffer.replace('<%s' % ch, '\n').replace('</%s' % ch, '').replace('>', ' ')
+                event_string = event_string.replace('<%s' % ch, '\n').replace('</%s' % ch, '').replace('>', ' ')
             for ch in ['span']:
-                event_buffer = event_buffer.replace('<%s' % ch, '').replace('</%s' % ch, '').replace('>', ' ')
-            event_buffer = event_buffer.replace('style=""', '').replace(' "', '"')
-            yr, mn, dy = 2015, 1, 1
-            for l in event_buffer.split('\n'):
+                event_string = event_string.replace('<%s' % ch, '').replace('</%s' % ch, '').replace('>', ' ')
+            event_string = event_string.replace('style=""', '').replace(' "', '"')
+            yr, mn, dy, hr, me = 2015, 1, 1, 9, 0
+            for l in event_string.split('\n'):
                 ent = l.split()
                 if len(ent) == 0:
                     continue
@@ -170,119 +171,55 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                     current_event.event_name = ' '.join(ent[2:])
                 if 'event-location' in ent[0]:
                     current_event.event_location = ' '.join(ent[2:]).replace('|', ',')
-            current_event.event_time = datetime.date(year=yr, month=mn, day=dy)
-            yield current_event
-            current_event
-        event_buffer.append(line.strip())
-    exit(0)
-    
+            event_buffer2 = []
+            try:
+                _url = urlopen(current_event.event_url)
+            except ValueError:
+                print(current_event.event_url)
+                continue
+            if _url.getcode() != 200:
+                continue
+            for l in _url:
+                if 'race-info' in l:
+                    event_buffer2.append(l)
+                if not event_buffer2:
+                    continue
 
-    yield None
-
-
-    return
-    current_event = None
-
-    current_year = datetime.date.today().year
-    get_next_line_0 = False
-    get_next_line_1 = False
-    for line in f:
-        if get_next_line_1:
-            current_event.event_desc = line.replace('<p>', '').replace('</p>', '').strip()
-            get_next_line_1 = False
-        if get_next_line_0:
-            for ent in line.replace('<', '><').replace('>', '><').split('><'):
-                if 'href' in ent and len(current_event.event_url) == 0:
-                    for e in ent.split():
-                        if 'href' in e:
-                            if 'http' not in e:
-                                current_event.event_url = 'http://glirc.org/%s' % e.split('href=')[1].replace('"', '')
-                            else:
-                                current_event.event_url = e.split('href=')[1].replace('"', '')
-                elif len(ent.split()) > 0 and ent.split()[0]in months_long:
-                    dstr = ent.replace('|', '').strip()
-                    month = months_long.index(dstr.split()[0]) + 1
-                    try:
-                        day = int(dstr.split()[1].replace(',', ''))
-                    except ValueError:
-                        current_event.event_name = dstr
-                        continue
-                    year = int(dstr.split()[2])
-                    hour = 9
-                    minute = 0
-                    duration = 60
-                    begin_time_str = ''
-                    end_time_str = ''
-                    if 'glirc.org' in current_event.event_url:
+                event_buffer2.append(l.strip())
+                if 'race-display-terms' in l:
+                    break
+            event_string = ''.join(event_buffer2)
+            for ch in ['div', 'a', 'h2', 'script', 'strong']:
+                event_string = event_string.replace('<%s' % ch, '\n').replace('</%s' % ch, '').replace('>', ' ')
+            for l in event_string.split('\n'):
+                ent = l.replace('time:', '').replace('Start time:', '').split()
+                if len(ent)<2:
+                    continue
+                if 'Start time:' in l:
+                    for n in range(len(ent)):
+                        if ':' not in ent[n]:
+                            continue
                         try:
-                            for l in urlopen(current_event.event_url):
-                                if 'Time:' in l:
-                                    for k in l.replace('<', '\n').replace('>', '\n').replace('-', '\n').split('\n'):
-                                        if 'AM' in k or 'PM' in k:
-                                            if len(begin_time_str) == 0:
-                                                begin_time_str = k.strip()
-                                            elif len(end_time_str) == 0:
-                                                end_time_str = k.strip()
-                                elif 'Location:' in l:
-                                    current_event.event_location = l.split('<span>')[1].split('</span>')[0]
-                                elif 'var point' in l:
-                                    try:
-                                        lat, lng = [float(x) for x in
-                                                    l.split('(')[1].split(')')[0].split(',')[:2]]
-                                        current_event.event_lat = lat
-                                        current_event.event_lon = lng
-                                    except ValueError:
-                                        pass
-                        except Exception as htexc:
-                            print('bad url %s' % current_event.event_url)
-                            pass
-                            #print("Exception:", htexc, current_event.event_url, current_event.print_event())
-                    dt = datetime.datetime(year=year, month=month, day=day, hour=9, minute=0, tzinfo=tzobj)
-                    if len(begin_time_str) > 0:
-                        bhr = int(begin_time_str[0:2])
-                        bmn = int(begin_time_str[3:5])
-                        if 'AM' in begin_time_str and bhr == 12:
-                            bhr = 0
-                        if 'PM' in begin_time_str and bhr != 12:
-                            bhr += 12
-                        dt = datetime.datetime(year=year, month=month, day=day, hour=bhr, minute=bmn, tzinfo=tzobj)
-                    if len(end_time_str) > 0:
-                        try:
-                            ehr = int(end_time_str[0:2])
-                            emn = int(end_time_str[3:5])
-                            if 'AM' in end_time_str and ehr == 12:
-                                ehr = 0
-                            if 'PM' in end_time_str and ehr != 12:
-                                ehr += 12
-                            et = datetime.datetime(year=year, month=month, day=day, hour=ehr, minute=emn, tzinfo=tzobj)
-                            if et <= dt:
-                                et = dt + datetime.timedelta(minutes=60)
+                            hr, me = map(int, ent[n].split(':'))
+                            s = ent[n+1].lower()
                         except ValueError:
-                            print('ValueError: %s' % end_time_str)
-                    else:
-                        et = dt + datetime.timedelta(minutes=60)
-
-                    d = datetime.datetime(year=year, month=month, day=day)
-                    dt -= tzobj.dst(d)
-                    et -= tzobj.dst(d)
-
-                    current_event.event_time = dt
-                    current_event.event_end_time = et
-
-                elif '<' not in ent and '>' not in ent and len(ent.strip()) > 0:
-                    if len(current_event.event_name) == 0:
-                        current_event.event_name = ent.strip()
-
-            get_next_line_0 = False
-            get_next_line_1 = True
-        if 'e-listing-info' in line:
-            if current_event:
-                yield current_event
+                            try:
+                                v, s = ent[n].lower().replace(';', ' ').replace('am', ' am').replace('pm', ' pm').split()
+                                hr, me = map(int, v.split(':')[:2])
+                            except ValueError:
+                                continue
+                        if 'pm' in s.lower() and hr != 12:
+                            hr += 12
+                if 'initialize(' in ent[0]:
+                    lat, lon = [float(s) for s in
+                                ent[0].replace("'",'').replace(
+                                    'initialize(','').split(',')[:2]]
+                    current_event.event_lat, current_event.event_lon = lat, lon
+            current_event.event_time = datetime.datetime(year=yr, month=mn, day=dy, hour=hr, minute=me, tzinfo=tzobj)
+            current_event.event_end_time = current_event.event_time + datetime.timedelta(minutes=60)
+            yield current_event
             current_event = nycruns_event()
-
-            #list_of_events.append(nycruns_event())
-            get_next_line_0 = True
-    yield current_event
+            event_buffer = []
 
 def process_response(response, outlist):
     for item in response['items']:
@@ -329,7 +266,6 @@ if __name__ == "__main__":
         for l in parse_nycruns():
             if l.event_time >= datetime.datetime.now(tzobj):
                 l.print_event()
-    exit(0)
     if _command == 'new':
         exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
         for l in parse_nycruns():

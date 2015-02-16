@@ -24,7 +24,6 @@ tzobj = pytz.timezone("US/Eastern")
 def strip_out_unicode_crap(inpstr):
     import re
     return re.sub(r'[^\x00-\x7F]','', inpstr)
-    # return str(''.join(x for x in inpstr if ord(x) <= 0x7f))
 
 class base_event(object):
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
@@ -139,11 +138,14 @@ class base_event(object):
         print('\n'.join(ostr))
 
 
-def parse_events(parser_callback=None, script_name='', simple_callback=None, full_callback=None):
+def parse_events(parser_callback=None, script_name='', simple_callback=None, full_callback=None, calid=None, callback_class=None):
     if not parser_callback:
         return
+    if not callback_class:
+        callback_class = base_event
     
-    calid = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
+    if not calid:
+        calid = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
     commands = ['h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm', 'search', 'week', 'dupe']
 
     _command = ''
@@ -175,18 +177,20 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
     if _command == 'new':
         new_events = []
         new_events_dict = {}
+        existing_events = {}
         exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=full_callback)
+        for e in exist.values():
+            ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
+            existing_events[ev_key] = True
         for l in parser_callback():
             if _args and l.generate_id() not in _args:
                 continue
-            if not any([e.compare(l) for e in exist.values()]):
-                for e in exist.values():
-                    if e.compare(l, 3):
-                        e.print_event()
-                if l.eventId not in new_events_dict:
+            ev_key = '%s_%s' % (l.event_time.strftime('%Y-%m-%d'), l.event_name)
+            if ev_key not in existing_events:
+                if ev_key not in new_events_dict:
                     l.print_event()
                     new_events.append(l)
-                    new_events_dict[l.eventId] = l
+                    new_events_dict[ev_key] = l
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
                 pickle.dump(new_events, pkl_file, pickle.HIGHEST_PROTOCOL)
@@ -209,24 +213,23 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
         for l in new_events:
             c.add_to_gcal(ev_entry=l, calid=_arg)
     if _command == 'dupe':
-        remove_dict = {}
         keep_dict = {}
+        remove_dict = {}
         c = gcal_instance()
         exist = c.get_gcal_events(calid=_arg, callback_fn=full_callback)
         for k in sorted(exist.keys()):
             e = exist[k]
-            for l in sorted(exist.keys()):
-                if k == l:
-                    continue
-                f = exist[l]
-                if e.compare(f,3):
-                    e.print_event()
-                    f.print_event()
-                    if l not in remove_dict:
-                        remove_dict[l] = f
-                        c.delete_from_gcal(calid=_arg, evid=f.eventId)
-                    if k not in keep_dict:
-                        keep_dict[k] = e
+            ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
+            if ev_key not in keep_dict:
+                keep_dict[ev_key] = e
+            else:
+                print(ev_key)
+                e.print_event()
+                remove_dict[ev_key] = e
+        print('number %d %d' % (len(keep_dict), len(remove_dict)))
+        for k in remove_dict:
+            e = remove_dict[k]
+            c.delete_from_gcal(calid=_arg, evid=e.eventId)
     if _command == 'cal':
         gcal_instance().get_gcal_events(calid=_arg, callback_fn=simple_callback)
     if _command == 'week':
@@ -239,19 +242,14 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
     if _command == 'pcal':
         c = gcal_instance()
         exist = c.get_gcal_events(calid=_arg, callback_fn=full_callback)
+        print(len(exist.keys()))
         for k in sorted(exist.keys()):
             e = exist[k]
             if e.event_time >= datetime.datetime.now(tzobj):
                 e.print_event()
             elif 'past' in _args:
                 e.print_event()
-        nycruns_events = []
-        print('\nNEW FROM WEB\n')
-        for l in parser_callback():
-            nycruns_events.append(l)
-            if not any([e.compare(l) for e in exist.values()]):
-                if l.event_time >= datetime.datetime.now(tzobj):
-                    l.print_event()
+        base_events = []
     if _command == 'listcal':
         gcal_instance().list_gcal_calendars()
     if _command == 'rm':
@@ -259,7 +257,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
         for arg in _args:
             c.delete_from_gcal(calid=_arg, evid=arg)
     if _command == 'search':
-        current_event = nycruns_event()
+        current_event = callback_class()
         if _args[0] not in [k.replace('event_', '').replace('event', '') for k in current_event.__dict__.keys()]:
             print(_args)
             exit(0)

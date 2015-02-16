@@ -200,22 +200,8 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
 
     yield current_event
 
-def process_response(response, outlist):
-    for item in response['items']:
-        t = physics_event()
-        t.read_gcal_event(item)
-        kstr = '%s %s' % (t.event_time, t.eventId)
-        outlist[kstr] = t
-
-def simple_response(response, outlist=None):
-    for item in response['items']:
-        for k, it in item.items():
-            print('%s: %s' % (k, it))
-        print('')
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_physics, script_name='parse_physics',
-                 simple_callback=simple_response,
-                 full_callback=process_response,
                  calid='1enjsutpgucsid46mde8ffdtf4@group.calendar.google.com',
                  callback_class=physics_event)

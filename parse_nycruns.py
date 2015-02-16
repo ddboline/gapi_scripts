@@ -132,22 +132,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
             current_event = nycruns_event()
             event_buffer = []
 
-def process_response(response, outlist):
-    for item in response['items']:
-        t = nycruns_event()
-        t.read_gcal_event(item)
-        kstr = '%s %s' % (t.event_time, t.eventId)
-        outlist[kstr] = t
-
-def simple_response(response, outlist=None):
-    for item in response['items']:
-        for k, it in item.items():
-            print('%s: %s' % (k, it))
-        print('')
-
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_nycruns, script_name='parse_nycruns',
-                 simple_callback=simple_response,
-                 full_callback=process_response,
                  callback_class=nycruns_event)

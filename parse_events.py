@@ -120,7 +120,6 @@ class base_event(object):
                 self.event_lat, self.event_lon = [float(x) for x in
                                                   obj['location'].split(',')[:2]]
             except ValueError:
-                print('bad location')
                 pass
         self.eventId = obj['id']
 

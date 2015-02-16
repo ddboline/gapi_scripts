@@ -16,7 +16,6 @@ class glirc_event(base_event):
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
         base_event.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url, ev_desc=ev_desc, ev_loc=ev_loc)
 
-
 def parse_glirc(url='http://glirc.org/events.php?limit=100'):
     f = urlopen(url)
 
@@ -139,4 +138,6 @@ def simple_response(response, outlist=None):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_glirc, script_name='parse_glirc',
-                 simple_callback=simple_response, full_callback=process_response)
+                 simple_callback=simple_response, 
+                 full_callback=process_response,
+                 callback_class=glirc_event)

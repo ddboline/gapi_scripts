@@ -138,7 +138,21 @@ class base_event(object):
         print('\n'.join(ostr))
 
 
-def parse_events(parser_callback=None, script_name='', simple_callback=None, full_callback=None, calid=None, callback_class=None):
+def parse_events(parser_callback=None, script_name='', calid=None, callback_class=None):
+    
+    def process_response(response, outlist):
+        for item in response['items']:
+            t = callback_class()
+            t.read_gcal_event(item)
+            kstr = '%s %s' % (t.event_time, t.eventId)
+            outlist[kstr] = t
+
+    def simple_response(response, outlist=None):
+        for item in response['items']:
+            for k, it in item.items():
+                print('%s: %s' % (k, it))
+            print('')
+    
     if not parser_callback:
         return
     if not callback_class:
@@ -178,7 +192,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
         new_events = []
         new_events_dict = {}
         existing_events = {}
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=full_callback)
+        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
         for e in exist.values():
             ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
             existing_events[ev_key] = True
@@ -203,7 +217,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
             os.remove('.tmp_%s.pkl.gz' % script_name)
         except:
             print('no pickle file')
-            exist = c.get_gcal_events(calid=_arg, callback_fn=full_callback)
+            exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
             for l in parser_callback():
                 if _args and l.generate_id() not in _args:
                     continue
@@ -216,7 +230,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
         keep_dict = {}
         remove_dict = {}
         c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=full_callback)
+        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
         for k in sorted(exist.keys()):
             e = exist[k]
             ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
@@ -231,9 +245,9 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
             e = remove_dict[k]
             c.delete_from_gcal(calid=_arg, evid=e.eventId)
     if _command == 'cal':
-        gcal_instance().get_gcal_events(calid=_arg, callback_fn=simple_callback)
+        gcal_instance().get_gcal_events(calid=_arg, callback_fn=simple_response)
     if _command == 'week':
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=full_callback)
+        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
         for k in sorted(exist.keys()):
             e = exist[k]
             if e.event_time < datetime.datetime.now(tzobj) or e.event_time > datetime.datetime.now(tzobj) + datetime.timedelta(days=7):
@@ -241,7 +255,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
             e.print_event()
     if _command == 'pcal':
         c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=full_callback)
+        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
         print(len(exist.keys()))
         for k in sorted(exist.keys()):
             e = exist[k]
@@ -264,7 +278,7 @@ def parse_events(parser_callback=None, script_name='', simple_callback=None, ful
         if len(_args) < 2:
             print(_args)
             exit(0)
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=full_callback)
+        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
 
         def search_event(e):
             k = 'event_%s' % _args[0]

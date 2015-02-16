@@ -9,12 +9,40 @@ from gcal_instance import gcal_instance
 
 from parse_events import base_event, parse_events,\
     months_short, months_long,\
-    weekdays, tzobj
+    weekdays, tzobj, strip_out_unicode_crap
 
 
 class nycruns_event(base_event):
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
         base_event.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url, ev_desc=ev_desc, ev_loc=ev_loc)
+
+    def compare(self, obj, partial_match=None):
+        comp_list = []
+        attr_list = ['event_time', 'event_end_time', 'event_url', 'event_location', 'event_name']
+        out_list = []
+        for attr in attr_list:
+            c0 = getattr(self, attr)
+            c1 = getattr(obj, attr)
+            out_list.append([c0, c1])
+            if type(c0) == str or type(c0) == unicode:
+                c0 = strip_out_unicode_crap(c0)
+            if type(c1) == str or type(c1) == unicode:
+                c1 = strip_out_unicode_crap(c1)
+            if type(c0) == str:
+                c0 = c0.replace('  ', ' ').strip()
+            if type(c1) == str:
+                c1 = c1.replace('  ', ' ').strip()
+            if c0 == c1:
+                comp_list.append(True)
+            else:
+                comp_list.append(False)
+        if all(comp_list):
+            return True
+        else:
+            if partial_match:
+                if sum(comp_list) > partial_match:
+                    return True
+            return False
 
 
 def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
@@ -51,7 +79,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                 if 'event-link' in ent[0]:
                     current_event.event_url = ent[1].replace('href=', '').replace('"', '')
                 if 'event-name' in ent[0]:
-                    current_event.event_name = ' '.join(ent[2:])
+                    current_event.event_name = ' '.join(ent[2:]).strip()
                 if 'event-location' in ent[0]:
                     current_event.event_location = ' '.join(ent[2:]).replace('|', ',')
             event_buffer2 = []
@@ -120,4 +148,6 @@ def simple_response(response, outlist=None):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_nycruns, script_name='parse_nycruns',
-                 simple_callback=simple_response, full_callback=process_response)
+                 simple_callback=simple_response,
+                 full_callback=process_response,
+                 callback_class=nycruns_event)

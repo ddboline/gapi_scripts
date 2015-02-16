@@ -8,19 +8,20 @@ import random
 from util import dateTimeString
 from gcal_instance import gcal_instance
 
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-buildings = ['Math Tower', 'Harriman Hall', 'Grad. Physics', 'ESS']
-
-tzobj = pytz.timezone("US/Eastern")
+from parse_events import base_event, parse_events,\
+    months_short, months_long,\
+    weekdays, tzobj
 
 def datetimefromstring(tstr):
     import dateutil.parser
     return dateutil.parser.parse(tstr)
 
-class physics_event(object):
-    def __init__(self, dt=datetime.datetime.now(tzobj), room='', title='', speaker='', talk_type=''):
-        self.event_time = dt
+
+class physics_event(base_event):
+    def __init__(self, dt=None, room='', title='', speaker='', talk_type=''):
+        if not dt:
+            dt = datetime.datetime.now(tzobj)
+        base_event.__init__(self, dt=dt)
         self.room = room
         self.talk_type = talk_type
         self.title = title
@@ -45,19 +46,6 @@ class physics_event(object):
         else:
             return False
 
-    def generate_id(self):
-        import hashlib
-        id_list = []
-        for k in sorted(self.__dict__.keys()):
-            if k == 'eventId':
-                continue
-            id_list.append('%s%s' % (k, self.__dict__[k]))
-        id_str = ''.join(id_list)
-        m = hashlib.md5()
-        m.update(id_str)
-        self.eventId = m.hexdigest()
-        return self.eventId
-
     def define_new_event_object(self):
         return {'creator': {'self': True, 'displayName': 'Daniel Boline', 'email': 'ddboline@gmail.com'},
                 'originalStartTime': {'dateTime': dateTimeString(self.event_time)},
@@ -66,8 +54,7 @@ class physics_event(object):
                 'summary': self.talk_type,
                 'description': '\"%s\"\n%s\n' % (self.title, self.speaker),
                 'start': {'dateTime': dateTimeString(self.event_time)},
-                'end': {'dateTime': dateTimeString(self.event_time + datetime.timedelta(hours=1))},
-  }
+                'end': {'dateTime': dateTimeString(self.event_time + datetime.timedelta(hours=1))},}
 
     def read_gcal_event(self, obj):
         if 'start' in obj:
@@ -213,11 +200,6 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
 
     yield current_event
 
-    #for ev in list_of_events:
-    #    ev.print_event()
-
-    #return list_of_events
-
 def process_response(response, outlist):
     for item in response['items']:
         t = physics_event()
@@ -232,85 +214,5 @@ def simple_response(response, outlist=None):
         print('')
 
 if __name__ == "__main__":
-    calid = '1enjsutpgucsid46mde8ffdtf4@group.calendar.google.com'
-
-    commands = ['h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm', 'week']
-
-    _command = ''
-    _arg = calid
-    l = []
-
-    for arg in os.sys.argv:
-        if arg.split('=')[0] in commands:
-            _command = arg.split('=')[0]
-        else:
-            arg = 'h'
-        if '=' in arg:
-            _arg = arg.split('=')[1]
-
-    _args = []
-    for arg in os.sys.argv[1:]:
-        if arg in commands:
-            continue
-        _args.append(arg)
-
-    if _command == 'h':
-        print('./parse_physics.py <%s>' % '|'.join(commands))
-        exit(0)
-
-    if _command == 'list':
-        for l in parse_physics():
-            if not l:
-                continue
-            if 'all' in _args:
-                l.print_event()
-            elif l.event_time >= datetime.datetime.now(tzobj):
-                l.print_event()
-    if _command == 'new':
-        c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
-        for l in parse_physics():
-            if not l:
-                continue
-            if not any([e.compare(l) for e in exist.values()]):
-                if l.event_time >= datetime.datetime.now(tzobj):
-                    l.print_event()
-    if _command == 'post':
-        c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
-        for l in parse_physics():
-            if not any([e.compare(l) for e in exist.values()]):
-                c.add_to_gcal(ev_entry=l, calid=_arg)
-    if _command == 'cal':
-        c = gcal_instance()
-        c.get_gcal_events(calid=_arg, callback_fn=simple_response)
-    if _command == 'week':
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
-        for k in sorted(exist.keys()):
-            e = exist[k]
-            if e.event_time < datetime.datetime.now(tzobj) or e.event_time > datetime.datetime.now(tzobj) + datetime.timedelta(days=7):
-                continue
-            e.print_event()
-    if _command == 'pcal':
-        c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
-        for k in sorted(exist.keys()):
-            e = exist[k]
-            if e.event_time >= datetime.datetime.now(tzobj):
-                e.print_event()
-            elif 'past' in _args:
-                e.print_event()
-        print('\nNEW FROM WEB\n')
-        for l in parse_physics():
-            if not l:
-                continue
-            if not any([e.compare(l) for e in exist.values()]):
-                if l.event_time >= datetime.datetime.now(tzobj):
-                    l.print_event()
-    if _command == 'listcal':
-        c = gcal_instance()
-        c.list_gcal_calendars()
-    if _command == 'rm':
-        c = gcal_instance()
-        for arg in _args:
-            c.delete_from_gcal(calid=_arg, evid=arg)
+    parse_events(parser_callback=parse_physics, script_name='parse_physics',
+                 simple_callback=simple_response, full_callback=process_response)

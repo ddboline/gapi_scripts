@@ -8,6 +8,12 @@ import random
 from util import dateTimeString, datetimefromstring
 from gcal_instance import gcal_instance
 
+import gzip
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 months_long = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -287,6 +293,7 @@ if __name__ == "__main__":
             if l.event_time >= datetime.datetime.now(tzobj):
                 l.print_event()
     if _command == 'new':
+        new_events = []
         exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
         for l in parse_glirc():
             if _args and l.generate_id() not in _args:
@@ -296,15 +303,28 @@ if __name__ == "__main__":
                     if e.compare(l, 3):
                         e.print_event()
                 l.print_event()
+                new_events.append(l)
+        if new_events:
+            with gzip.open('.tmp_glirc.pkl.gz', 'wb') as pkl_file:
+                pickle.dump(new_events, pkl_file, pickle.HIGHEST_PROTOCOL)
     if _command == 'post':
+        new_events = []
         c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
-        for l in parse_glirc():
-            if _args and l.generate_id() not in _args:
-                continue
-            if not any([e.compare(l) for e in exist.values()]):
-                l.print_event()
-                c.add_to_gcal(ev_entry=l, calid=_arg)
+        try:
+            with gzip.open('.tmp_glirc.pkl.gz', 'rb') as pkl_file:
+                new_events = pickle.load(pkl_file)
+            os.remove('.tmp_glirc.pkl.gz')
+        except:
+            print('no pickle file')
+            exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
+            for l in parse_glirc():
+                if _args and l.generate_id() not in _args:
+                    continue
+                if not any([e.compare(l) for e in exist.values()]):
+                    l.print_event()
+                    new_events.append(l)
+        for l in new_events:
+            c.add_to_gcal(ev_entry=l, calid=_arg)
     if _command == 'cal':
         gcal_instance().get_gcal_events(calid=_arg, callback_fn=simple_response)
     if _command == 'week':

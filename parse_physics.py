@@ -9,7 +9,7 @@ from util import dateTimeString
 from gcal_instance import gcal_instance
 
 from parse_events import base_event, parse_events,\
-    months_short, months_long,\
+    months_short as months, months_long, buildings,\
     weekdays, tzobj
 
 def datetimefromstring(tstr):
@@ -19,16 +19,13 @@ def datetimefromstring(tstr):
 
 class physics_event(base_event):
     def __init__(self, dt=None, room='', title='', speaker='', talk_type=''):
-        if not dt:
-            dt = datetime.datetime.now(tzobj)
         base_event.__init__(self, dt=dt)
         self.room = room
         self.talk_type = talk_type
         self.title = title
         self.speaker = speaker
-        self.eventId = None
 
-    def compare(self, obj):
+    def compare(self, obj, partial_match=None):
         comp_list = []
         if self and not obj:
             return False
@@ -44,6 +41,9 @@ class physics_event(base_event):
         if all(comp_list):
             return True
         else:
+            if partial_match:
+                if sum(comp_list) > partial_match:
+                    return True
             return False
 
     def define_new_event_object(self):
@@ -143,7 +143,7 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
             if len(ents) == 0:
                 continue
             if ents[0].replace(',', '').strip() in weekdays:
-                d = datetime.datetime(year=2014, month=months.index(ents[1])+1, day=int(ents[2]))
+                d = datetime.datetime(year=datetime.datetime.now(tzobj).year, month=months.index(ents[1])+1, day=int(ents[2]))
                 if current_event:
                     yield current_event
                     table_entry = []
@@ -215,4 +215,7 @@ def simple_response(response, outlist=None):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_physics, script_name='parse_physics',
-                 simple_callback=simple_response, full_callback=process_response)
+                 simple_callback=simple_response,
+                 full_callback=process_response,
+                 calid='1enjsutpgucsid46mde8ffdtf4@group.calendar.google.com',
+                 callback_class=physics_event)

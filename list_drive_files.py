@@ -292,4 +292,5 @@ if __name__ == '__main__':
         for parent in gdrive.get_parents(fids=search_strings):
             print(parent['id'])
     elif cmd == 'delete':
-        gdrive.delete_file(fileid=search_strings[0])
+        for search_string in search_strings:
+            gdrive.delete_file(fileid=search_string)

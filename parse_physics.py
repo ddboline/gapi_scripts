@@ -82,7 +82,10 @@ class physics_event(base_event):
                       '\t speaker: %s' % self.speaker,
                       '\t title: %s' % self.title,
                       '\t eventId: %s' % self.eventId]
-        print('\n'.join(ostr))
+        try:
+            print('\n'.join(ostr))
+        except UnicodeDecodeError:
+            print('\n'.join(x.encode(errors='ignore') for x in ostr))
 
 def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
     ''' parse physics web page to get the week's events '''

@@ -84,7 +84,7 @@ class physics_event(base_event):
                       '\t eventId: %s' % self.eventId]
         try:
             print('\n'.join(ostr))
-        except UnicodeDecodeError:
+        except UnicodeEncodeError:
             print('\n'.join(x.encode(errors='ignore') for x in ostr))
 
 def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):

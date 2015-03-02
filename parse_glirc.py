@@ -28,6 +28,7 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
     get_next_line_0 = False
     get_next_line_1 = False
     for line in f:
+        line = line.decode(errors='ignore')
         if get_next_line_1:
             current_event.event_desc = line.replace('<p>', '').replace('</p>', '').strip()
             get_next_line_1 = False
@@ -57,6 +58,7 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                     if 'glirc.org' in current_event.event_url:
                         try:
                             for l in urlopen(current_event.event_url):
+                                l = l.decode(errors='ignore')
                                 if 'Time:' in l:
                                     for k in l.replace('<', '\n').replace('>', '\n').replace('-', '\n').split('\n'):
                                         if 'AM' in k or 'PM' in k:
@@ -76,8 +78,8 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                                         pass
                         except Exception as htexc:
                             print('bad url %s' % current_event.event_url)
+                            print("Exception:", htexc, current_event.event_url, current_event.print_event())
                             pass
-                            #print("Exception:", htexc, current_event.event_url, current_event.print_event())
                     dt = datetime.datetime(year=year, month=month, day=day, hour=9, minute=0, tzinfo=tzobj)
                     if len(begin_time_str) > 0:
                         bhr = int(begin_time_str[0:2])

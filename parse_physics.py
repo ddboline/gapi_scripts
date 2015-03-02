@@ -104,6 +104,7 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
     table_entry = []
     last_filled = None
     for line in f:
+        line = line.decode(errors='ignore')
         if is_main_page:
             if '<!-- thisweek.php starts -->' in line:
                 in_thisweek = True

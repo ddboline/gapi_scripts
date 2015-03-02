@@ -49,11 +49,10 @@ class nycruns_event(base_event):
 
 
 def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
-    inurl = urlopen(url)
-
     current_event = None
     event_buffer = []
     for line in urlopen(url):
+        line = line.decode(errors='ignore')
         if 'class="event"' in line:
             current_event = nycruns_event()
         if not current_event:
@@ -94,6 +93,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
             if _url.getcode() != 200:
                 continue
             for l in _url:
+                l = l.decode(errors='ignore')
                 if 'race-info' in l:
                     event_buffer2.append(l)
                 if not event_buffer2:

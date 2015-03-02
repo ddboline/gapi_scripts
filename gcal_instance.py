@@ -3,7 +3,10 @@
 '''
     gcal_instance class, used by parse_glirc and parse_physics
 '''
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 class gcal_instance(object):
     ''' class to make use of google python api '''

@@ -199,6 +199,8 @@ def parse_events(parser_callback=None, script_name='', calid=None, callback_clas
             ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
             existing_events[ev_key] = True
         for l in parser_callback():
+            if not l:
+                continue
             if _args and l.generate_id() not in _args:
                 continue
             ev_key = '%s_%s' % (l.event_time.strftime('%Y-%m-%d'), l.event_name)

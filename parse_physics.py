@@ -150,12 +150,16 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
             if len(ents) == 0:
                 continue
             if ents[0].replace(',', '').strip() in weekdays:
-                d = datetime.datetime(year=datetime.datetime.now(tzobj).year, month=months.index(ents[1])+1, day=int(ents[2]))
+                try:
+                    d = datetime.datetime(year=datetime.datetime.now(tzobj).year, month=months.index(ents[1])+1, day=int(ents[2]))
+                except ValueError:
+                    d = datetime.datetime.now()
                 if current_event:
                     yield current_event
                     table_entry = []
                     last_filled = 'Date'
                 current_event = physics_event()
+                current_event.event_time = d
             elif ents[0] == 'Time:':
                 h = int(ents[1].split('/')[0].split(':')[0])
                 m = int(ents[1].split('/')[0].split(':')[1])

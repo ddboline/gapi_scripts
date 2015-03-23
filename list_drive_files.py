@@ -239,7 +239,7 @@ class gdrive_instance(object):
                     os.makedirs(exportpath)
             resp, f = self.service._http.request(dlink)
             if resp['status'] != '200':
-                print(dlink)
+                print(title, dlink)
                 print('something bad happened %s' % resp)
                 continue
             with open(exportfile, 'wb') as outfile:

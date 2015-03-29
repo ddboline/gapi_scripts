@@ -141,7 +141,7 @@ class base_event(object):
 
 
 def parse_events(parser_callback=None, script_name='', calid=None, callback_class=None):
-    
+
     def process_response(response, outlist):
         for item in response['items']:
             t = callback_class()
@@ -154,12 +154,12 @@ def parse_events(parser_callback=None, script_name='', calid=None, callback_clas
             for k, it in item.items():
                 print('%s: %s' % (k, it))
             print('')
-    
+
     if not parser_callback:
         return
     if not callback_class:
         callback_class = base_event
-    
+
     if not calid:
         calid = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
     commands = ['h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm', 'search', 'week', 'dupe']

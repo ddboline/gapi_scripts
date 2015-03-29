@@ -87,20 +87,20 @@ class gdrive_instance(object):
     def delete_file(self, fileid):
         request = self.service.files().delete(fileId=fileid)
         response = request.execute()
-    
+
     def upload_file(self, filelist, parent_id=None, directory_name=None):
         output = []
         if directory_name:
             qstr = 'title contains "%s"' % directory_name
             request = self.service.files().list(q=qstr, maxResults=10)
             response = request.execute()
-        
+
             new_request = True
             while new_request:
                 if self.process_response(response, list_dirs=True) == 0:
                     break
                 print('N processed: %d' % self.items_processed)
-        
+
                 new_request = self.service.files().list_next(request, response)
                 if not new_request:
                     break
@@ -120,20 +120,20 @@ class gdrive_instance(object):
                 print('File %s not found, try using absolute path!' % fname)
                 continue
             fn = fname.split('/')[-1]
-    
+
             body_obj = {'title': fn,}
 
             request = self.service.files().insert(body=body_obj, media_body=fname)
             response = request.execute()
-    
+
             fid = response['id']
-            print('%s %s %s' % (fid, response['md5Checksum'], response['title'], ))
-            
+            print('%s %s %s' % (fid, response['md5Checksum'], response['title'],))
+
             request = self.service.parents().list(fileId=fid)
             response = request.execute()
-            
+
             output.append('%s' % response['items'])
-            
+
             current_pid = response['items'][0]['id']
 
             output.append('%s %s' % (parent_id, current_pid))
@@ -146,7 +146,7 @@ class gdrive_instance(object):
         """ function to list files in drive """
         if not fids:
             return
-        
+
         parents_output = []
         for fid in fids:
             request = self.service.files().get(fileId=fid)
@@ -161,7 +161,7 @@ class gdrive_instance(object):
 
         request = self.service.files().get(fileId=fid)
         response = request.execute()
-    
+
         self.process_item(response)
         self.download_or_list_files(do_download=True, do_export=False)
 
@@ -170,19 +170,19 @@ class gdrive_instance(object):
         qstr = None
         if searchstr:
             qstr = 'title contains "%s"' % searchstr
-        
+
         if number_to_list > 0:
             request = self.service.files().list(q=qstr, maxResults=number_to_list)
         else:
             request = self.service.files().list(q=qstr)
         response = request.execute()
-    
+
         new_request = True
         while new_request:
             if self.process_response(response, list_dirs=list_dirs) == 0:
                 break
             print('N processed: %d' % self.items_processed)
-    
+
             new_request = self.service.files().list_next(request, response)
             if not new_request:
                 break
@@ -201,7 +201,7 @@ class gdrive_instance(object):
                 title, pid = self.list_of_folders[did]
                 output.append('%s %s %s' % (did, title, pid))
             return '\n'.join(output)
-        
+
         for itid in self.list_of_items:
             title, fext, pid, dlink, isExport, md5chksum = self.list_of_items[itid]
             if (do_export and not isExport) and do_download:

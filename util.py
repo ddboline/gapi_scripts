@@ -253,3 +253,7 @@ def make_time_series_plot(input_file='', prefix='temp'):
     pl.clf()
     run_command('mv %s/%s_time.png %s/public_html/videos/' % (HOMEDIR, prefix, HOMEDIR))
     return 'Done'
+
+def get_md5(fname):
+    _cmd = 'md5sum %s 2> /dev/null' % cleanup_path(fname)
+    return run_command(_cmd, do_popen=True).read().split()[0]

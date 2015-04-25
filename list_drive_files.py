@@ -275,7 +275,7 @@ class gdrive_instance(object):
                     if response:
                         title = response['title']
                         ptitle_list.append(title)
-                        if len(response['parents'])>0:
+                        if len(response['parents']) > 0:
                             pid = response['parents'][0]['id']
                         else:
                             pid = None
@@ -284,7 +284,8 @@ class gdrive_instance(object):
             exportfile = '/'.join(ptitle_list[::-1])
             exportfile = exportfile.replace('My Drive/', '')
             exportfile = '%s/%s' % (self.gdrive_base_dir, exportfile)
-            output.append('%s %s' % (itid, exportfile))
+            if not do_download:
+                output.append('%s %s' % (itid, exportfile))
             if not do_download:
                 continue
             if '/' in exportfile:
@@ -301,6 +302,7 @@ class gdrive_instance(object):
                                                   exportfile))
                 if md5chksum == get_md5(exportfile):
                     print('%s %s exists' % (md5chksum, exportfile))
+                    self.gdrive_md5_cache[exportfile] = (md5chksum, mtime_cur)
                     continue
                 elif not md5chksum:
                     md5chksum = get_md5(exportfile)

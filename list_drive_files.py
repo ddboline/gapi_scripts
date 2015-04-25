@@ -1,13 +1,26 @@
-#! /usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os, time
-from urllib2 import urlopen
+import os
+import time
+import gzip
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 from apiclient import sample_tools
+from apiclient.errors import HttpError
+
+from util import get_md5
+
+GDRIVE_MIMETYPES = [
+'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+'text/csv', 'image/png', 'application/vnd.oasis.opendocument.text',
+'application/pdf']
 
 class gdrive_instance(object):
     """ class to make use of google python api """
@@ -21,16 +34,31 @@ class gdrive_instance(object):
         self.list_of_folders = {}
         self.list_of_items = {}
 
-        curdir = os.curdir
-
         self.service, self.flags = \
             sample_tools.init([], app, version, __doc__, __file__,\
                 scope='https://www.googleapis.com/auth/%s' % app)
         self.number_to_process = number_to_process
-        #os.chdir(curdir)
+
+        self.gdrive_md5_cache_file = '%s/.gdrive_md5_cache.pkl.gz'\
+                                      % os.getenv('HOME')
+        self.gdrive_md5_cache = {}
+        self.gdrive_base_dir = '%s/gDrive' % os.getenv('HOME')
+
+    def read_cache_file(self):
+        if not os.path.exists(self.gdrive_md5_cache_file):
+            return
+        with gzip.open(self.gdrive_md5_cache_file, 'rb') as cachefile:
+            self.gdrive_md5_cache = pickle.load(cachefile)
+        return
+
+    def write_cache_file(self):
+        with gzip.open(self.gdrive_md5_cache_file, 'wb') as cachefile:
+            pickle.dump(self.gdrive_md5_cache, cachefile, protocol=2)
+        return
 
     def process_item(self, it, output=None, list_dirs=False):
-        if self.number_to_process > 0 and self.items_processed > self.number_to_process:
+        if self.number_to_process > 0\
+                and self.items_processed > self.number_to_process:
             return
         self.items_processed += 1
         for k in it:
@@ -63,23 +91,30 @@ class gdrive_instance(object):
                         fext = it['fileExtension']
                 elif 'exportLinks' in it:
                     isExport = True
-                    elmime = [el for el in it['exportLinks'] if 'application/x-vnd.oasis.opendocument' in el]
-                    for other_type in ['text/csv', 'image/png', 'application/vnd.oasis.opendocument.text', 'application/pdf']:
+                    elmime = []
+                    for el in it['exportLinks']:
+                        if 'application/x-vnd.oasis.opendocument' in el:
+                            elmime.append(el)
+                    for other_type in GDRIVE_MIMETYPES:
                         if not elmime and other_type in it['exportLinks']:
-                            elmime = [el for el in it['exportLinks'] if other_type in el]
+                            elmime = [el for el in it['exportLinks']
+                                      if other_type in el]
                     if elmime:
                         dlink = it['exportLinks'][elmime[0]]
                         fext = dlink.split('exportFormat=')[1]
                     else:
-                        print('not sure what happened...', it['title'], it['mimeType'], it['exportLinks'])
+                        print('not sure what happened...', it['title'],
+                              it['mimeType'], it['exportLinks'])
                         raw_input()
                 if fext and pid and dlink:
-                    self.list_of_items[it['id']] = [it['title'], fext, pid, dlink, isExport, md5chksum]
+                    self.list_of_items[it['id']] = [it['title'], fext, pid,
+                                                    dlink, isExport, md5chksum]
 
 
     def process_response(self, response, output=None, list_dirs=False):
         ### mimeType, parents
-        if self.number_to_process > 0 and self.items_processed > self.number_to_process:
+        if self.number_to_process > 0\
+                and self.items_processed > self.number_to_process:
             return 0
         for it in response['items']:
             self.process_item(it, output, list_dirs)
@@ -87,6 +122,7 @@ class gdrive_instance(object):
     def delete_file(self, fileid):
         request = self.service.files().delete(fileId=fileid)
         response = request.execute()
+        return response
 
     def upload_file(self, filelist, parent_id=None, directory_name=None):
         output = []
@@ -107,7 +143,7 @@ class gdrive_instance(object):
                 request = new_request
                 try:
                     response = request.execute()
-                except apiclient.errors.HttpError:
+                except HttpError:
                     time.sleep(5)
                     response = request.execute()
             for did in self.list_of_folders:
@@ -123,11 +159,13 @@ class gdrive_instance(object):
 
             body_obj = {'title': fn,}
 
-            request = self.service.files().insert(body=body_obj, media_body=fname)
+            request = self.service.files().insert(body=body_obj,
+                                                  media_body=fname)
             response = request.execute()
 
             fid = response['id']
-            print('%s %s %s' % (fid, response['md5Checksum'], response['title'],))
+            print('%s %s %s' % (fid, response['md5Checksum'],
+                                response['title'],))
 
             request = self.service.parents().list(fileId=fid)
             response = request.execute()
@@ -138,7 +176,9 @@ class gdrive_instance(object):
 
             output.append('%s %s' % (parent_id, current_pid))
 
-            request = self.service.files().update(fileId=fid, addParents=parent_id, removeParents=current_pid)
+            request = self.service.files().update(fileId=fid,
+                                                  addParents=parent_id,
+                                                  removeParents=current_pid)
             response = request.execute()
         return '\n'.join(output)
 
@@ -165,14 +205,16 @@ class gdrive_instance(object):
         self.process_item(response)
         self.download_or_list_files(do_download=True, do_export=False)
 
-    def list_files(self, do_download=False, number_to_list=100, searchstr=None, list_dirs=False):
+    def list_files(self, do_download=False, number_to_list=100, searchstr=None,
+                   list_dirs=False):
         """ function to list files in drive """
         qstr = None
         if searchstr:
             qstr = 'title contains "%s"' % searchstr
 
         if number_to_list > 0:
-            request = self.service.files().list(q=qstr, maxResults=number_to_list)
+            request = self.service.files().list(q=qstr,
+                                                maxResults=number_to_list)
         else:
             request = self.service.files().list(q=qstr)
         response = request.execute()
@@ -189,12 +231,13 @@ class gdrive_instance(object):
             request = new_request
             try:
                 response = request.execute()
-            except apiclient.errors.HttpError:
+            except HttpError:
                 time.sleep(5)
                 response = request.execute()
         return self.download_or_list_files(do_download, list_dirs=list_dirs)
 
-    def download_or_list_files(self, do_download=False, do_export=True, list_dirs=False):
+    def download_or_list_files(self, do_download=False, do_export=False,
+                               list_dirs=False):
         output = []
         if list_dirs:
             for did in self.list_of_folders:
@@ -203,8 +246,9 @@ class gdrive_instance(object):
             return '\n'.join(output)
 
         for itid in self.list_of_items:
-            title, fext, pid, dlink, isExport, md5chksum = self.list_of_items[itid]
-            if (do_export and not isExport) and do_download:
+            title, fext, pid, dlink, isExport, md5chksum =\
+                self.list_of_items[itid]
+            if do_download and (do_export and not isExport):
                 continue
             if not fext:
                 print(title, pid, dlink)
@@ -228,15 +272,30 @@ class gdrive_instance(object):
                             pid = None
                     else:
                         pid = None
-            ptitle_list.append('DriveExport')
             exportfile = '/'.join(ptitle_list[::-1])
+            exportfile = exportfile.replace('My Drive', self.gdrive_base_dir)
             output.append('%s %s' % (itid, exportfile))
             if not do_download:
                 continue
             if '/' in exportfile:
                 exportpath = '/'.join(exportfile.split('/')[:-1])
-                if not os.path.exists(exportpath):
+                try:
                     os.makedirs(exportpath)
+                except:
+                    pass
+            if os.path.exists(exportfile):
+                if md5chksum == get_md5(exportfile):
+                    print('%s %s exists' % (md5chksum, exportfile))
+                    continue
+                elif not md5chksum:
+                    md5chksum = get_md5(exportfile)
+                else:
+                    print('md5 %s' % md5chksum)
+
+            if exportfile in self.gdrive_md5_cache:
+                print('%s %s in cache' % (self.gdrive_md5_cache[exportfile],
+                                          exportfile))
+                continue
             resp, f = self.service._http.request(dlink)
             if resp['status'] != '200':
                 print(title, dlink)
@@ -245,6 +304,10 @@ class gdrive_instance(object):
             with open(exportfile, 'wb') as outfile:
                 for line in f:
                     outfile.write(line)
+                if not md5chksum:
+                    md5chksum = get_md5(exportfile)
+                print(md5chksum, exportfile)
+                self.gdrive_md5_cache[exportfile] = md5chksum
         return '\n'.join(output)
 
 if __name__ == '__main__':
@@ -252,12 +315,15 @@ if __name__ == '__main__':
     search_strings = []
     parent_directory = None
     number_to_list = 100
-    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories', 'parent', 'delete']
+    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories',
+                'parent', 'delete']
     for arg in os.sys.argv:
         if 'list_drive_files.py' in arg:
             continue
         elif arg in ['h', '--help', '-h']:
-            print('list_drive_files <%s> <file/key> directory=<id of directory>' % '|'.join(COMMANDS))
+            print(
+                'list_drive_files <%s> <file/key> directory=<id of directory>'\
+                    % '|'.join(COMMANDS))
             exit(0)
         elif arg in COMMANDS:
             cmd = arg
@@ -273,23 +339,34 @@ if __name__ == '__main__':
         number_to_list = -1
     gdrive = gdrive_instance(number_to_process=number_to_list)
     if cmd == 'list':
-        print(gdrive.list_files(do_download=False, number_to_list=number_to_list))
+        print(gdrive.list_files(do_download=False,
+                                number_to_list=number_to_list))
     elif cmd == 'search':
         if search_strings:
             for search_string in search_strings:
-                print(gdrive.list_files(do_download=False, searchstr=search_string, number_to_list=number_to_list))
+                print(gdrive.list_files(do_download=False,
+                                        searchstr=search_string,
+                                        number_to_list=number_to_list))
     elif cmd == 'sync':
-        print(gdrive.list_files(do_download=True, number_to_list=number_to_list))
+        gdrive.read_cache_file()
+        print(gdrive.list_files(do_download=True,
+                                number_to_list=number_to_list))
+        gdrive.write_cache_file()
     elif cmd == 'directories':
         if search_strings:
             for search_string in search_strings:
-                print(gdrive.list_files(do_download=False, number_to_list=100, searchstr=search_string, list_dirs=True))
+                print(gdrive.list_files(do_download=False, number_to_list=100,
+                                        searchstr=search_string,
+                                        list_dirs=True))
     elif cmd == 'download':
+        gdrive.read_cache_file()
         for search_string in search_strings:
             gdrive.download_file_by_id(fid=search_string)
+        gdrive.write_cache_file()
     elif cmd == 'upload':
         print(number_to_list, search_strings)
-        gdrive.upload_file(filelist=search_strings, directory_name=parent_directory)
+        gdrive.upload_file(filelist=search_strings,
+                           directory_name=parent_directory)
     elif cmd == 'parent':
         print(number_to_list, search_strings)
         for parent in gdrive.get_parents(fids=search_strings):

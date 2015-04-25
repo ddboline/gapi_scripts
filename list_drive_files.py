@@ -16,6 +16,7 @@ from apiclient import sample_tools
 from apiclient.errors import HttpError
 
 from util import get_md5
+from dateutil.parser import parse
 
 GDRIVE_MIMETYPES = [
 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -83,6 +84,9 @@ class gdrive_instance(object):
                 fext = None
                 isExport = False
                 md5chksum = None
+                mtime = None
+                if 'modifiedDate' in it:
+                    mtime = it['modifiedDate']
                 if 'downloadUrl' in it:
                     if 'md5Checksum' in it:
                         md5chksum = it['md5Checksum']
@@ -107,8 +111,10 @@ class gdrive_instance(object):
                               it['mimeType'], it['exportLinks'])
                         raw_input()
                 if fext and pid and dlink:
-                    self.list_of_items[it['id']] = [it['title'], fext, pid,
-                                                    dlink, isExport, md5chksum]
+                    self.list_of_items[it['id']] = {
+                        'title': it['title'], 'fext': fext, 'pid': pid, 
+                        'link': dlink, 'export': isExport, 'md5': md5chksum,
+                        'mtime': parse(mtime).strftime("%s")}
 
 
     def process_response(self, response, output=None, list_dirs=False):
@@ -246,8 +252,11 @@ class gdrive_instance(object):
             return '\n'.join(output)
 
         for itid in self.list_of_items:
-            title, fext, pid, dlink, isExport, md5chksum =\
-                self.list_of_items[itid]
+            
+            title, fext, pid, dlink, isExport, md5chksum, mtime =\
+                [self.list_of_items[itid][k] for k in ('title', 'fext', 'pid',
+                                                       'link', 'export', 'md5',
+                                                       'mtime')]
             if do_download and (do_export and not isExport):
                 continue
             if not fext:
@@ -273,7 +282,8 @@ class gdrive_instance(object):
                     else:
                         pid = None
             exportfile = '/'.join(ptitle_list[::-1])
-            exportfile = exportfile.replace('My Drive', self.gdrive_base_dir)
+            exportfile = exportfile.replace('My Drive/', '')
+            exportfile = '%s/%s' % (self.gdrive_base_dir, exportfile)
             output.append('%s %s' % (itid, exportfile))
             if not do_download:
                 continue
@@ -283,7 +293,12 @@ class gdrive_instance(object):
                     os.makedirs(exportpath)
                 except:
                     pass
+
             if os.path.exists(exportfile):
+                mtime_cur = os.stat(exportfile).st_mtime
+                if mtime < mtime_cur:
+                    print('%s %s %s unchanged' % (mtime_cur, mtime,
+                                                  exportfile))
                 if md5chksum == get_md5(exportfile):
                     print('%s %s exists' % (md5chksum, exportfile))
                     continue
@@ -291,12 +306,18 @@ class gdrive_instance(object):
                     md5chksum = get_md5(exportfile)
                 else:
                     print('md5 %s' % md5chksum)
+                if exportfile in self.gdrive_md5_cache:
+                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
+                    if _md5 == md5chksum and mtime >= _mtime:
+                        print('%s %s in cache %s %s' % (_md5, exportfile, 
+                                                        mtime, _mtime))
+                        continue
 
-            if exportfile in self.gdrive_md5_cache:
-                print('%s %s in cache' % (self.gdrive_md5_cache[exportfile],
-                                          exportfile))
+            try:
+                resp, f = self.service._http.request(dlink)
+            except Exception as e:
+                print('Exception %s' % e)
                 continue
-            resp, f = self.service._http.request(dlink)
             if resp['status'] != '200':
                 print(title, dlink)
                 print('something bad happened %s' % resp)
@@ -304,10 +325,9 @@ class gdrive_instance(object):
             with open(exportfile, 'wb') as outfile:
                 for line in f:
                     outfile.write(line)
-                if not md5chksum:
-                    md5chksum = get_md5(exportfile)
-                print(md5chksum, exportfile)
-                self.gdrive_md5_cache[exportfile] = md5chksum
+            md5chksum = get_md5(exportfile)
+            print('%s %s download' % (md5chksum, exportfile))
+            self.gdrive_md5_cache[exportfile] = (md5chksum, mtime)
         return '\n'.join(output)
 
 if __name__ == '__main__':

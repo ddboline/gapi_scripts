@@ -18,6 +18,8 @@ from apiclient.errors import HttpError
 from util import get_md5
 from dateutil.parser import parse
 
+from collections import defaultdict
+
 GDRIVE_MIMETYPES = [
 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 'text/csv', 'image/png', 'application/vnd.oasis.opendocument.text',
@@ -331,6 +333,31 @@ class gdrive_instance(object):
             print('%s %s download' % (md5chksum, exportfile))
             self.gdrive_md5_cache[exportfile] = (md5chksum, mtime)
         return '\n'.join(output)
+        
+    def scan_local_directory(self):
+        md5_file_index = defaultdict(list)
+        files_not_in_cache = defaultdict(list)
+        def parse_dir(arg, path, filelist):
+            for f in filelist:
+                exportfile = '%s/%s' % (path, f)
+                if os.path.isdir(exportfile):
+                    continue
+                if exportfile in self.gdrive_md5_cache:
+                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
+                    md5_file_index[_md5].append(exportfile)
+                else:
+                    md5sum = get_md5(exportfile)
+#                    print('%s %s' % (md5sum, exportfile))
+                    files_not_in_cache[md5sum].append(exportfile)
+        
+        os.path.walk(self.gdrive_base_dir, parse_dir, None)
+        for md5sum in files_not_in_cache:
+            if md5sum in md5_file_index:
+                print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
+#                for f in files_not_in_cache[md5sum]:
+#                    os.remove(f)
+            print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
+        return
 
 if __name__ == '__main__':
     cmd = 'list'
@@ -371,8 +398,8 @@ if __name__ == '__main__':
                                         number_to_list=number_to_list))
     elif cmd == 'sync':
         gdrive.read_cache_file()
-        print(gdrive.list_files(do_download=True,
-                                number_to_list=number_to_list))
+        gdrive.scan_local_directory()
+#        gdrive.list_files(do_download=True, number_to_list=number_to_list)
         gdrive.write_cache_file()
     elif cmd == 'directories':
         if search_strings:

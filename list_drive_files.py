@@ -260,8 +260,8 @@ class gdrive_instance(object):
                                                        'mtime')]
             if do_download and (do_export and not isExport):
                 continue
-#            if fext not in title.lower():
-#                title = '.'.join([title,fext])
+            if fext not in title.lower():
+                title = '.'.join([title,fext])
             ptitle_list = [title]
             while pid:
                 if pid in self.list_of_folders:
@@ -298,6 +298,7 @@ class gdrive_instance(object):
 
             if os.path.exists(exportfile):
                 mtime_cur = os.stat(exportfile).st_mtime
+                print('mtime', mtime, mtime_cur)
                 if mtime < mtime_cur:
                     print('%s %s %s unchanged' % (mtime_cur, mtime,
                                                   exportfile))

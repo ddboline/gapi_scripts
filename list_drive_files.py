@@ -114,7 +114,7 @@ class gdrive_instance(object):
                         raw_input()
                 if pid and dlink:
                     self.list_of_items[it['id']] = {
-                        'title': it['title'], 'fext': fext, 'pid': pid, 
+                        'title': it['title'], 'fext': fext, 'pid': pid,
                         'link': dlink, 'export': isExport, 'md5': md5chksum,
                         'mtime': parse(mtime).strftime("%s")}
 
@@ -253,7 +253,7 @@ class gdrive_instance(object):
             return '\n'.join(output)
 
         for itid in self.list_of_items:
-            
+
             title, fext, pid, dlink, isExport, md5chksum, mtime =\
                 [self.list_of_items[itid][k] for k in ('title', 'fext', 'pid',
                                                        'link', 'export', 'md5',
@@ -297,12 +297,14 @@ class gdrive_instance(object):
                     pass
 
             if os.path.exists(exportfile):
-                mtime_cur = os.stat(exportfile).st_mtime
-                print('mtime', mtime, mtime_cur)
-                if mtime < mtime_cur:
-                    print('%s %s %s unchanged' % (mtime_cur, mtime,
-                                                  exportfile))
-                if md5chksum == get_md5(exportfile):
+                mtime_cur = int(os.stat(exportfile).st_mtime)
+                if exportfile in self.gdrive_md5_cache:
+                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
+                    if _md5 == md5chksum and mtime >= _mtime:
+                        print('%s %s in cache %s %s' % (_md5, exportfile,
+                                                        mtime, _mtime))
+                        continue
+                elif md5chksum == get_md5(exportfile):
                     print('%s %s exists' % (md5chksum, exportfile))
                     self.gdrive_md5_cache[exportfile] = (md5chksum, mtime_cur)
                     continue
@@ -310,12 +312,6 @@ class gdrive_instance(object):
                     md5chksum = get_md5(exportfile)
                 else:
                     print('md5 %s' % md5chksum)
-                if exportfile in self.gdrive_md5_cache:
-                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
-                    if _md5 == md5chksum and mtime >= _mtime:
-                        print('%s %s in cache %s %s' % (_md5, exportfile, 
-                                                        mtime, _mtime))
-                        continue
 
             try:
                 resp, f = self.service._http.request(dlink)
@@ -335,7 +331,7 @@ class gdrive_instance(object):
             print('%s %s download' % (md5chksum, exportfile))
             self.gdrive_md5_cache[exportfile] = (md5chksum, mtime)
         return '\n'.join(output)
-        
+
     def scan_local_directory(self):
         md5_file_index = defaultdict(list)
         files_not_in_cache = defaultdict(list)
@@ -351,12 +347,13 @@ class gdrive_instance(object):
                     md5sum = get_md5(exportfile)
 #                    print('%s %s' % (md5sum, exportfile))
                     files_not_in_cache[md5sum].append(exportfile)
-        
+
         os.path.walk(self.gdrive_base_dir, parse_dir, None)
         for md5sum in files_not_in_cache:
             if md5sum in md5_file_index:
-                print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
+                print('%s %s inmd5' % (md5sum, files_not_in_cache[md5sum]))
             print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
+#            os.remove(files_not_in_cache[md5sum][0])
         return
 
 if __name__ == '__main__':

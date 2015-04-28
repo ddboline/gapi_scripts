@@ -112,12 +112,11 @@ class gdrive_instance(object):
                         print('not sure what happened...', it['title'],
                               it['mimeType'], it['exportLinks'])
                         raw_input()
-                if fext and pid and dlink:
+                if pid and dlink:
                     self.list_of_items[it['id']] = {
                         'title': it['title'], 'fext': fext, 'pid': pid, 
                         'link': dlink, 'export': isExport, 'md5': md5chksum,
                         'mtime': parse(mtime).strftime("%s")}
-
 
     def process_response(self, response, output=None, list_dirs=False):
         ### mimeType, parents
@@ -261,10 +260,8 @@ class gdrive_instance(object):
                                                        'mtime')]
             if do_download and (do_export and not isExport):
                 continue
-            if not fext:
-                print(title, pid, dlink)
-            elif fext not in title:
-                title = '.'.join([title,fext])
+#            if fext not in title.lower():
+#                title = '.'.join([title,fext])
             ptitle_list = [title]
             while pid:
                 if pid in self.list_of_folders:
@@ -278,7 +275,9 @@ class gdrive_instance(object):
                         title = response['title']
                         ptitle_list.append(title)
                         if len(response['parents']) > 0:
-                            pid = response['parents'][0]['id']
+                            ppid = response['parents'][0]['id']
+                            self.list_of_folders[pid] = [title, ppid]
+                            pid = ppid
                         else:
                             pid = None
                     else:
@@ -326,9 +325,11 @@ class gdrive_instance(object):
                 print(title, dlink)
                 print('something bad happened %s' % resp)
                 continue
-            with open(exportfile, 'wb') as outfile:
+            tempfile = '%s.tmp' % exportfile
+            with open(tempfile, 'wb') as outfile:
                 for line in f:
                     outfile.write(line)
+            os.rename(tempfile, exportfile)
             md5chksum = get_md5(exportfile)
             print('%s %s download' % (md5chksum, exportfile))
             self.gdrive_md5_cache[exportfile] = (md5chksum, mtime)
@@ -354,8 +355,6 @@ class gdrive_instance(object):
         for md5sum in files_not_in_cache:
             if md5sum in md5_file_index:
                 print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
-#                for f in files_not_in_cache[md5sum]:
-#                    os.remove(f)
             print('%s %s' % (md5sum, files_not_in_cache[md5sum]))
         return
 
@@ -399,7 +398,7 @@ if __name__ == '__main__':
     elif cmd == 'sync':
         gdrive.read_cache_file()
         gdrive.scan_local_directory()
-#        gdrive.list_files(do_download=True, number_to_list=number_to_list)
+        gdrive.list_files(do_download=True, number_to_list=number_to_list)
         gdrive.write_cache_file()
     elif cmd == 'directories':
         if search_strings:

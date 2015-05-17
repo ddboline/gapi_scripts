@@ -362,7 +362,7 @@ if __name__ == '__main__':
     parent_directory = None
     number_to_list = 100
     COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories',
-                'parent', 'delete']
+                'parent', 'delete', 'new']
     for arg in os.sys.argv:
         if 'list_drive_files.py' in arg:
             continue
@@ -393,6 +393,9 @@ if __name__ == '__main__':
                 print(gdrive.list_files(do_download=False,
                                         searchstr=search_string,
                                         number_to_list=number_to_list))
+    elif cmd == 'new':
+        gdrive.read_cache_file()
+        gdrive.scan_local_directory()
     elif cmd == 'sync':
         gdrive.read_cache_file()
         gdrive.scan_local_directory()

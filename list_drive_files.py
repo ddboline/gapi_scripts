@@ -112,7 +112,7 @@ class gdrive_instance(object):
                         print('not sure what happened...', it['title'],
                               it['mimeType'], it['exportLinks'])
                         raw_input()
-                if pid and dlink:
+                if dlink:
                     self.list_of_items[it['id']] = {
                         'title': it['title'], 'fext': fext, 'pid': pid,
                         'link': dlink, 'export': isExport, 'md5': md5chksum,
@@ -134,7 +134,7 @@ class gdrive_instance(object):
     def upload_file(self, filelist, parent_id=None, directory_name=None):
         output = []
         if directory_name:
-            qstr = 'title contains "%s"' % directory_name
+            qstr = 'title contains "%s"' % directory_name.split('/')[-1]
             request = self.service.files().list(q=qstr, maxResults=10)
             response = request.execute()
 

@@ -32,8 +32,9 @@ class gcal_instance(object):
             add event to calendar,
             rely on define_new_event_object function to do actual work
         '''
-        request = self.service.events().insert(\
-            calendarId=calid, body=ev_entry.define_new_event_object())
+        request = self.service.events()\
+                              .insert(calendarId=calid,
+                                      body=ev_entry.define_new_event_object())
         response = request.execute()
         return response
 
@@ -43,7 +44,8 @@ class gcal_instance(object):
         response = request.execute()
         return response
 
-    def get_gcal_events(self, calid='', callback_fn=None, do_single_events=False):
+    def get_gcal_events(self, calid='', callback_fn=None,
+                        do_single_events=False):
         '''
             get events from calendar
             use callback_fn to handle output
@@ -51,12 +53,17 @@ class gcal_instance(object):
         list_of_gcal_events = {}
 
         if do_single_events:
-            from util import dateTimeString, datetimefromstring
+            from util import dateTimeString
             import datetime
-            mintime = dateTimeString(datetime.datetime.now() - datetime.timedelta(days=1))
-            maxtime = dateTimeString(datetime.datetime.now() + datetime.timedelta(days=7))
+            mintime = dateTimeString(datetime.datetime.now() -
+                                     datetime.timedelta(days=1))
+            maxtime = dateTimeString(datetime.datetime.now() +
+                                     datetime.timedelta(days=7))
 
-            request = self.service.events().list(calendarId=calid, singleEvents=True, timeMin=mintime, timeMax=maxtime)
+            request = self.service.events().list(calendarId=calid,
+                                                 singleEvents=True,
+                                                 timeMin=mintime,
+                                                 timeMax=maxtime)
             response = request.execute()
         else:
             request = self.service.events().list(calendarId=calid)
@@ -78,18 +85,23 @@ class gcal_instance(object):
         '''
             get instances of a recurring event
         '''
-        from util import dateTimeString, datetimefromstring
+        from util import dateTimeString
         import datetime
-        mintime = dateTimeString(datetime.datetime.now() - datetime.timedelta(days=1))
-        maxtime = dateTimeString(datetime.datetime.now() + datetime.timedelta(days=7))
+        mintime = dateTimeString(datetime.datetime.now() -
+                                 datetime.timedelta(days=1))
+        maxtime = dateTimeString(datetime.datetime.now() +
+                                 datetime.timedelta(days=7))
 
         list_of_gcal_instances = {}
-        request = self.service.events().instances(calendarId=calid, eventId=evtid, timeMin=mintime, timeMax=maxtime)
+        request = self.service.events().instances(calendarId=calid,
+                                                  eventId=evtid,
+                                                  timeMin=mintime,
+                                                  timeMax=maxtime)
         response = request.execute()
 
         new_request = True
         while new_request:
-            callback_fn(response, list_of_gcal_events)
+            callback_fn(response, list_of_gcal_instances)
 
             new_request = self.service.events().list_next(request, response)
             if not new_request:

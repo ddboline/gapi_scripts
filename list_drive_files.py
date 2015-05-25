@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+""" Script to interact with google drive api """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -25,7 +26,7 @@ GDRIVE_MIMETYPES = [
 'text/csv', 'image/png', 'application/vnd.oasis.opendocument.text',
 'application/pdf']
 
-class gdrive_instance(object):
+class GdriveInstance(object):
     """ class to make use of google python api """
 
     def __init__(self, app='drive', version='v2', number_to_process=-1):
@@ -48,6 +49,7 @@ class gdrive_instance(object):
         self.gdrive_base_dir = '%s/gDrive' % os.getenv('HOME')
 
     def read_cache_file(self):
+        """ read cache file """
         if not os.path.exists(self.gdrive_md5_cache_file):
             return
         with gzip.open(self.gdrive_md5_cache_file, 'rb') as cachefile:
@@ -55,83 +57,88 @@ class gdrive_instance(object):
         return
 
     def write_cache_file(self):
+        """ write cache file """
         with gzip.open(self.gdrive_md5_cache_file, 'wb') as cachefile:
             pickle.dump(self.gdrive_md5_cache, cachefile, protocol=2)
         return
 
-    def process_item(self, it, output=None, list_dirs=False):
+    def process_item(self, item, list_dirs=False):
+        """ process item from gdrive api """
         if self.number_to_process > 0\
                 and self.items_processed > self.number_to_process:
             return
         self.items_processed += 1
-        for k in it:
+        for k in item:
             if k not in self.list_of_keys:
                 self.list_of_keys[k] = 0
             self.list_of_keys[k] += 1
-        if it['mimeType'] not in self.list_of_mimetypes:
-            self.list_of_mimetypes[it['mimeType']] = 0
-        self.list_of_mimetypes[it['mimeType']] += 1
-        if it['mimeType'] == 'application/vnd.google-apps.folder':
-            if it['id'] not in self.list_of_folders:
+        if item['mimeType'] not in self.list_of_mimetypes:
+            self.list_of_mimetypes[item['mimeType']] = 0
+        self.list_of_mimetypes[item['mimeType']] += 1
+        if item['mimeType'] == 'application/vnd.google-apps.folder':
+            if item['id'] not in self.list_of_folders:
                 pid = None
-                if it['parents']:
-                    pid = it['parents'][0]['id']
-                self.list_of_folders[it['id']] = [it['title'], pid]
+                if item['parents']:
+                    pid = item['parents'][0]['id']
+                self.list_of_folders[item['id']] = [item['title'], pid]
         elif not list_dirs:
-            if it['id'] not in self.list_of_items:
+            if item['id'] not in self.list_of_items:
                 pid = None
-                if it['parents']:
-                    pid = it['parents'][0]['id']
+                if item['parents']:
+                    pid = item['parents'][0]['id']
                 dlink = None
                 fext = None
-                isExport = False
+                is_export = False
                 md5chksum = None
                 mtime = None
-                if 'modifiedDate' in it:
-                    mtime = it['modifiedDate']
-                if 'downloadUrl' in it:
-                    if 'md5Checksum' in it:
-                        md5chksum = it['md5Checksum']
-                    dlink = it['downloadUrl']
-                    if 'fileExtension' in it:
-                        fext = it['fileExtension']
-                elif 'exportLinks' in it:
-                    isExport = True
+                if 'modifiedDate' in item:
+                    mtime = item['modifiedDate']
+                if 'downloadUrl' in item:
+                    if 'md5Checksum' in item:
+                        md5chksum = item['md5Checksum']
+                    dlink = item['downloadUrl']
+                    if 'fileExtension' in item:
+                        fext = item['fileExtension']
+                elif 'exportLinks' in item:
+                    is_export = True
                     elmime = []
-                    for el in it['exportLinks']:
-                        if 'application/x-vnd.oasis.opendocument' in el:
-                            elmime.append(el)
+                    for el_ in item['exportLinks']:
+                        if 'application/x-vnd.oasis.opendocument' in el_:
+                            elmime.append(el_)
                     for other_type in GDRIVE_MIMETYPES:
-                        if not elmime and other_type in it['exportLinks']:
-                            elmime = [el for el in it['exportLinks']
-                                      if other_type in el]
+                        if not elmime and other_type in item['exportLinks']:
+                            elmime = [el_ for el_ in item['exportLinks']
+                                      if other_type in el_]
                     if elmime:
-                        dlink = it['exportLinks'][elmime[0]]
+                        dlink = item['exportLinks'][elmime[0]]
                         fext = dlink.split('exportFormat=')[1]
                     else:
-                        print('not sure what happened...', it['title'],
-                              it['mimeType'], it['exportLinks'])
+                        print('not sure what happened...', item['title'],
+                              item['mimeType'], item['exportLinks'])
                         raw_input()
                 if dlink:
-                    self.list_of_items[it['id']] = {
-                        'title': it['title'], 'fext': fext, 'pid': pid,
-                        'link': dlink, 'export': isExport, 'md5': md5chksum,
+                    self.list_of_items[item['id']] = {
+                        'title': item['title'], 'fext': fext, 'pid': pid,
+                        'link': dlink, 'export': is_export, 'md5': md5chksum,
                         'mtime': parse(mtime).strftime("%s")}
 
-    def process_response(self, response, output=None, list_dirs=False):
+    def process_response(self, response, list_dirs=False):
+        """ process response from gdrive api """
         ### mimeType, parents
         if self.number_to_process > 0\
                 and self.items_processed > self.number_to_process:
             return 0
-        for it in response['items']:
-            self.process_item(it, output, list_dirs)
+        for item in response['items']:
+            self.process_item(item, list_dirs)
 
     def delete_file(self, fileid):
+        """ delete file by fileid """
         request = self.service.files().delete(fileId=fileid)
         response = request.execute()
         return response
 
     def upload_file(self, filelist, parent_id=None, directory_name=None):
+        """ upload files """
         output = []
         if directory_name:
             qstr = 'title contains "%s"' % directory_name.split('/')[-1]
@@ -162,9 +169,9 @@ class gdrive_instance(object):
             if not os.path.exists(fname):
                 print('File %s not found, try using absolute path!' % fname)
                 continue
-            fn = fname.split('/')[-1]
+            fn_ = fname.split('/')[-1]
 
-            body_obj = {'title': fn,}
+            body_obj = {'title': fn_,}
 
             request = self.service.files().insert(body=body_obj,
                                                   media_body=fname)
@@ -245,6 +252,7 @@ class gdrive_instance(object):
 
     def download_or_list_files(self, do_download=False, do_export=False,
                                list_dirs=False):
+        """ download or list files """
         output = []
         if list_dirs:
             for did in self.list_of_folders:
@@ -254,14 +262,14 @@ class gdrive_instance(object):
 
         for itid in self.list_of_items:
 
-            title, fext, pid, dlink, isExport, md5chksum, mtime =\
+            title, fext, pid, dlink, is_export, md5chksum, mtime =\
                 [self.list_of_items[itid][k] for k in ('title', 'fext', 'pid',
                                                        'link', 'export', 'md5',
                                                        'mtime')]
-            if do_download and (do_export and not isExport):
+            if do_download and (do_export and not is_export):
                 continue
             if fext not in title.lower():
-                title = '.'.join([title,fext])
+                title = '.'.join([title, fext])
             ptitle_list = [title]
             while pid:
                 if pid in self.list_of_folders:
@@ -291,10 +299,8 @@ class gdrive_instance(object):
                 continue
             if '/' in exportfile:
                 exportpath = '/'.join(exportfile.split('/')[:-1])
-                try:
+                if not os.path.exists(exportpath):
                     os.makedirs(exportpath)
-                except:
-                    pass
 
             if os.path.exists(exportfile):
                 mtime_cur = int(os.stat(exportfile).st_mtime)
@@ -314,9 +320,9 @@ class gdrive_instance(object):
                     print('md5 %s' % md5chksum)
 
             try:
-                resp, f = self.service._http.request(dlink)
-            except Exception as e:
-                print('Exception %s' % e)
+                resp, url_ = self.service._http.request(dlink)
+            except Exception as exc:
+                print('Exception %s' % exc)
                 continue
             if resp['status'] != '200':
                 print(title, dlink)
@@ -324,7 +330,7 @@ class gdrive_instance(object):
                 continue
             tempfile = '%s.tmp' % exportfile
             with open(tempfile, 'wb') as outfile:
-                for line in f:
+                for line in url_:
                     outfile.write(line)
             os.rename(tempfile, exportfile)
             md5chksum = get_md5(exportfile)
@@ -333,11 +339,12 @@ class gdrive_instance(object):
         return '\n'.join(output)
 
     def scan_local_directory(self):
+        """ scan local directory """
         md5_file_index = defaultdict(list)
         files_not_in_cache = defaultdict(list)
         def parse_dir(arg, path, filelist):
-            for f in filelist:
-                exportfile = '%s/%s' % (path, f)
+            for fn_ in filelist:
+                exportfile = '%s/%s' % (path, fn_)
                 if os.path.isdir(exportfile):
                     continue
                 if exportfile in self.gdrive_md5_cache:
@@ -356,7 +363,7 @@ class gdrive_instance(object):
 #            os.remove(files_not_in_cache[md5sum][0])
         return
 
-if __name__ == '__main__':
+def list_drive_files():
     cmd = 'list'
     search_strings = []
     parent_directory = None
@@ -380,10 +387,9 @@ if __name__ == '__main__':
                 number_to_list = int(arg)
             except ValueError:
                 search_strings.append(arg)
-                pass
     if cmd == 'sync':
         number_to_list = -1
-    gdrive = gdrive_instance(number_to_process=number_to_list)
+    gdrive = GdriveInstance(number_to_process=number_to_list)
     if cmd == 'list':
         print(gdrive.list_files(do_download=False,
                                 number_to_list=number_to_list))
@@ -423,3 +429,6 @@ if __name__ == '__main__':
     elif cmd == 'delete':
         for search_string in search_strings:
             gdrive.delete_file(fileid=search_string)
+
+if __name__ == '__main__':
+    list_drive_files()

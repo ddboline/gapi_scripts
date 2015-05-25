@@ -53,11 +53,11 @@ class gcal_instance(object):
         list_of_gcal_events = {}
 
         if do_single_events:
-            from util import dateTimeString
+            from util import datetimestring
             import datetime
-            mintime = dateTimeString(datetime.datetime.now() -
+            mintime = datetimestring(datetime.datetime.now() -
                                      datetime.timedelta(days=1))
-            maxtime = dateTimeString(datetime.datetime.now() +
+            maxtime = datetimestring(datetime.datetime.now() +
                                      datetime.timedelta(days=7))
 
             request = self.service.events().list(calendarId=calid,
@@ -85,11 +85,11 @@ class gcal_instance(object):
         '''
             get instances of a recurring event
         '''
-        from util import dateTimeString
+        from util import datetimestring
         import datetime
-        mintime = dateTimeString(datetime.datetime.now() -
+        mintime = datetimestring(datetime.datetime.now() -
                                  datetime.timedelta(days=1))
-        maxtime = dateTimeString(datetime.datetime.now() +
+        maxtime = datetimestring(datetime.datetime.now() +
                                  datetime.timedelta(days=7))
 
         list_of_gcal_instances = {}

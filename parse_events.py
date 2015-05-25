@@ -9,7 +9,7 @@ import os
 import re
 import gzip
 import datetime, pytz
-from util import dateTimeString, datetimefromstring
+from util import datetimestring, datetimefromstring
 from gcal_instance import gcal_instance
 
 try:
@@ -99,7 +99,7 @@ class BaseEvent(object):
                     {'self': True, 'displayName': 'Daniel Boline',
                      'email': 'ddboline@gmail.com'},
                 'originalStartTime':
-                    {'dateTime': dateTimeString(self.event_time)},
+                    {'dateTime': datetimestring(self.event_time)},
                 'organizer':
                     {'self': True, 'displayName': 'Daniel Boline',
                      'email': 'ddboline@gmail.com'},
@@ -107,8 +107,8 @@ class BaseEvent(object):
                 'summary': self.event_name,
                 'description': 'Location: %s\nDescription: %s\n%s'
                     % (self.event_location, self.event_desc, self.event_url),
-                'start': {'dateTime': dateTimeString(self.event_time)},
-                'end': {'dateTime': dateTimeString(self.event_end_time)},}
+                'start': {'dateTime': datetimestring(self.event_time)},
+                'end': {'dateTime': datetimestring(self.event_end_time)},}
 
     def read_gcal_event(self, obj):
         """ Read GCalendar Event """
@@ -148,8 +148,8 @@ class BaseEvent(object):
 
     def print_event(self):
         """ Print Event """
-        ostr = ['%s %s' % (dateTimeString(self.event_time),
-                           dateTimeString(self.event_end_time)),
+        ostr = ['%s %s' % (datetimestring(self.event_time),
+                           datetimestring(self.event_end_time)),
                 '\t url: %s' % self.event_url,
                 '\t name: %s' % strip_out_unicode_crap(self.event_name),
                 '\t description: %s' % self.event_desc,

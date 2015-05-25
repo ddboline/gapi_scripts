@@ -48,7 +48,7 @@ class PhysicsEvent(BaseEvent):
 
     def define_new_event_object(self):
         """ Define new event object """
-        return {'creator': 
+        return {'creator':
                     {'self': True, 'displayName': 'Daniel Boline',
                      'email': 'ddboline@gmail.com'},
                 'originalStartTime':
@@ -61,8 +61,8 @@ class PhysicsEvent(BaseEvent):
                 'description': '\"%s\"\n%s\n' % (self.title, self.speaker),
                 'start':
                     {'dateTime': datetimestring(self.event_time)},
-                'end': 
-                    {'dateTime': datetimestring(self.event_time + 
+                'end':
+                    {'dateTime': datetimestring(self.event_time +
                                                 datetime.timedelta(hours=1))},}
 
     def read_gcal_event(self, obj):

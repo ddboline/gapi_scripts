@@ -1,35 +1,40 @@
 #!/usr/bin/python
+""" Base module for Parsing events """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+import re
+import gzip
 import datetime, pytz
-from urllib2 import urlopen
-import random
 from util import dateTimeString, datetimefromstring
 from gcal_instance import gcal_instance
 
-import gzip
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-months_long = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-buildings = ['Math Tower', 'Harriman Hall', 'Grad. Physics', 'ESS']
+MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                'Oct', 'Nov', 'Dec']
+MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+               'August', 'September', 'October', 'November', 'December']
+WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+            'Sunday']
+BUILDINGS = ['Math Tower', 'Harriman Hall', 'Grad. Physics', 'ESS']
 
-tzobj = pytz.timezone("US/Eastern")
+TZOBJ = pytz.timezone("US/Eastern")
 
 def strip_out_unicode_crap(inpstr):
-    import re
-    return re.sub(r'[^\x00-\x7F]','', inpstr)
+    """ remove non-ascii characters (could've used easier method) """
+    return re.sub(r'[^\x00-\x7F]', '', inpstr)
 
-class base_event(object):
+class BaseEvent(object):
+    """ Base Event Class """
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
+        """ Init Method """
         self.event_time = dt
         self.event_end_time = dt
         self.event_url = ev_url
@@ -38,25 +43,27 @@ class base_event(object):
         self.event_location = ev_loc
         self.event_lat = None
         self.event_lon = None
-        self.eventId = None
+        self.event_id = None
 
     def compare(self, obj, partial_match=None):
+        """ Compre event objects """
         comp_list = []
-        attr_list = ['event_time', 'event_end_time', 'event_url', 'event_desc', 'event_location', 'event_name']
+        attr_list = ('event_time', 'event_end_time', 'event_url', 'event_desc',
+                     'event_location', 'event_name')
         out_list = []
         for attr in attr_list:
-            c0 = getattr(self, attr)
-            c1 = getattr(obj, attr)
-            out_list.append([c0, c1])
-            if type(c0) == str or type(c0) == unicode:
-                c0 = strip_out_unicode_crap(c0)
-            if type(c1) == str or type(c1) == unicode:
-                c1 = strip_out_unicode_crap(c1)
-            if type(c0) == str:
-                c0 = c0.replace('  ', ' ').strip()
-            if type(c1) == str:
-                c1 = c1.replace('  ', ' ').strip()
-            if c0 == c1:
+            c0_ = getattr(self, attr)
+            c1_ = getattr(obj, attr)
+            out_list.append([c0_, c1_])
+            if type(c0_) == str or type(c0_) == unicode:
+                c0_ = strip_out_unicode_crap(c0_)
+            if type(c1_) == str or type(c1_) == unicode:
+                c1_ = strip_out_unicode_crap(c1_)
+            if type(c0_) == str:
+                c0_ = c0_.replace('  ', ' ').strip()
+            if type(c1_) == str:
+                c1_ = c1_.replace('  ', ' ').strip()
+            if c0_ == c1_:
                 comp_list.append(True)
             else:
                 comp_list.append(False)
@@ -69,33 +76,42 @@ class base_event(object):
             return False
 
     def generate_id(self):
+        """ Create unique ID """
         import hashlib
         id_list = []
         for k in sorted(self.__dict__.keys()):
-            if k == 'eventId':
+            if k == 'event_id':
                 continue
             id_list.append('%s%s' % (k, self.__dict__[k]))
         id_str = ''.join(id_list)
-        m = hashlib.md5()
-        m.update(id_str)
-        self.eventId = m.hexdigest()
-        return self.eventId
+        md_ = hashlib.md5()
+        md_.update(id_str)
+        self.event_id = md_.hexdigest()
+        return self.event_id
 
     def define_new_event_object(self):
+        """ Create new event object """
         if type(self.event_lat) == float and type(self.event_lon) == float:
             loc_str = '%f,%f' % (self.event_lat, self.event_lon)
         else:
             loc_str = self.event_location
-        return {'creator': {'self': True, 'displayName': 'Daniel Boline', 'email': 'ddboline@gmail.com'},
-                'originalStartTime': {'dateTime': dateTimeString(self.event_time)},
-                'organizer': {'self': True, 'displayName': 'Daniel Boline', 'email': 'ddboline@gmail.com'},
+        return {'creator':
+                    {'self': True, 'displayName': 'Daniel Boline',
+                     'email': 'ddboline@gmail.com'},
+                'originalStartTime':
+                    {'dateTime': dateTimeString(self.event_time)},
+                'organizer':
+                    {'self': True, 'displayName': 'Daniel Boline',
+                     'email': 'ddboline@gmail.com'},
                 'location': loc_str,
                 'summary': self.event_name,
-                'description': 'Location: %s\nDescription: %s\n%s' % (self.event_location, self.event_desc, self.event_url),
+                'description': 'Location: %s\nDescription: %s\n%s'
+                    % (self.event_location, self.event_desc, self.event_url),
                 'start': {'dateTime': dateTimeString(self.event_time)},
                 'end': {'dateTime': dateTimeString(self.event_end_time)},}
 
     def read_gcal_event(self, obj):
+        """ Read GCalendar Event """
         if 'dateTime' in obj['start']:
             tstr = obj['start']['dateTime']
             self.event_time = datetimefromstring(tstr)
@@ -103,9 +119,12 @@ class base_event(object):
             self.event_end_time = datetimefromstring(tstr)
         elif 'date' in obj['start']:
             tstr = obj['start']['date']
-            t = map(int, [tstr[0:4], tstr[5:7], tstr[8:10]])
-            self.event_time = datetime.datetime(year=t[0], month=t[1], day=t[2], hour=9, minute=0, tzinfo=tzobj)
-            self.event_end_time = self.event_time + datetime.timedelta(minutes=60)
+            ts_ = [int(x) for x in (tstr[0:4], tstr[5:7], tstr[8:10])]
+            self.event_time = datetime.datetime(year=ts_[0], month=ts_[1],
+                                                day=ts_[2], hour=9, minute=0,
+                                                tzinfo=TZOBJ)
+            self.event_end_time = self.event_time + \
+                                  datetime.timedelta(minutes=60)
         else:
             print(obj)
             exit(0)
@@ -121,197 +140,215 @@ class base_event(object):
         if 'location' in obj:
             try:
                 self.event_lat, self.event_lon = [float(x) for x in
-                                                  obj['location'].split(',')[:2]]
+                                                  obj['location']\
+                                                      .split(',')[:2]]
             except ValueError:
                 pass
-        self.eventId = obj['id']
+        self.event_id = obj['id']
 
     def print_event(self):
-        ostr = ['%s %s' % (dateTimeString(self.event_time), dateTimeString(self.event_end_time)),
+        """ Print Event """
+        ostr = ['%s %s' % (dateTimeString(self.event_time),
+                           dateTimeString(self.event_end_time)),
                 '\t url: %s' % self.event_url,
                 '\t name: %s' % strip_out_unicode_crap(self.event_name),
                 '\t description: %s' % self.event_desc,
                 '\t location: %s' %  self.event_location]
         if type(self.event_lat) == float and type(self.event_lon) == float:
             ostr[-1] += ' %f,%f' % (self.event_lat, self.event_lon)
-        if not self.eventId:
+        if not self.event_id:
             self.generate_id()
-        ostr.append('\t eventId: %s' % self.eventId)
+        ostr.append('\t event_id: %s' % self.event_id)
         print('\n'.join(ostr))
 
 
-def parse_events(parser_callback=None, script_name='', calid=None, callback_class=None):
+def parse_events(parser_callback=None, script_name='', calid=None,
+                 callback_class=None):
+    """ Parse GCalendar Events """
 
     def process_response(response, outlist):
+        """ Callback to process response """
         for item in response['items']:
-            t = callback_class()
-            t.read_gcal_event(item)
-            kstr = '%s %s' % (t.event_time, t.eventId)
-            outlist[kstr] = t
+            ts_ = callback_class()
+            ts_.read_gcal_event(item)
+            kstr = '%s %s' % (ts_.event_time, ts_.event_id)
+            outlist[kstr] = ts_
 
     def simple_response(response, outlist=None):
+        """ Simple Responce fn """
         for item in response['items']:
-            for k, it in item.items():
-                print('%s: %s' % (k, it))
+            for key, it_ in item.items():
+                print('%s: %s' % (key, it_))
             print('')
 
     if not parser_callback:
         return
     if not callback_class:
-        callback_class = base_event
+        callback_class = BaseEvent
 
     if not calid:
         calid = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
-    commands = ['h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm', 'search', 'week', 'dupe']
+    commands = ('h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm',
+                'search', 'week', 'dupe')
 
-    _command = ''
-    _arg = calid
-    l = []
+    command_ = ''
+    arg_ = calid
 
     for arg in os.sys.argv:
         if arg.split('=')[0] in commands:
-            _command = arg.split('=')[0]
+            command_ = arg.split('=')[0]
         else:
             arg = 'h'
         if '=' in arg:
-            _arg = arg.split('=')[1]
+            arg_ = arg.split('=')[1]
 
-    _args = []
+    args_ = []
     for arg in os.sys.argv[1:]:
         if arg in commands:
             continue
-        _args.append(arg)
+        args_.append(arg)
 
-    if _command == 'h':
+    if command_ == 'h':
         print('./%s <%s>' % (script_name, '|'.join(commands)))
         exit(0)
 
-    if _command == 'list':
-        for l in parser_callback():
-            if l.event_time >= datetime.datetime.now(tzobj):
-                l.print_event()
-    if _command == 'new':
+    if command_ == 'list':
+        for line in parser_callback():
+            if line.event_time >= datetime.datetime.now(TZOBJ):
+                line.print_event()
+    if command_ == 'new':
         new_events = []
         new_events_dict = {}
         existing_events = {}
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
-        for e in exist.values():
-            ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
+        exist = gcal_instance().get_gcal_events(calid=arg_,
+                                                callback_fn=process_response)
+        for ev_ in exist.values():
+            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'),
+                                ev_.event_name)
             existing_events[ev_key] = True
-        for l in parser_callback():
-            if not l:
+        for line in parser_callback():
+            if not line:
                 continue
-            if _args and l.generate_id() not in _args:
+            if args_ and line.generate_id() not in args_:
                 continue
-            ev_key = '%s_%s' % (l.event_time.strftime('%Y-%m-%d'), l.event_name)
+            ev_key = '%s_%s' % (line.event_time.strftime('%Y-%m-%d'),
+                                line.event_name)
             if ev_key not in existing_events:
                 if ev_key not in new_events_dict:
-                    l.print_event()
-                    new_events.append(l)
-                    new_events_dict[ev_key] = l
+                    line.print_event()
+                    new_events.append(line)
+                    new_events_dict[ev_key] = line
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
                 pickle.dump(new_events, pkl_file, pickle.HIGHEST_PROTOCOL)
-    if _command == 'post':
+    if command_ == 'post':
         new_events = []
-        c = gcal_instance()
+        gci = gcal_instance()
         try:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'rb') as pkl_file:
                 new_events = pickle.load(pkl_file)
             os.remove('.tmp_%s.pkl.gz' % script_name)
-        except:
-            print('no pickle file')
-            exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
-            for l in parser_callback():
-                if _args and l.generate_id() not in _args:
+        except Exception as exc:
+            print('no pickle file', exc)
+            exist = gci.get_gcal_events(calid=arg_,
+                                        callback_fn=process_response)
+            for line in parser_callback():
+                if args_ and line.generate_id() not in args_:
                     continue
-                if not any([e.compare(l) for e in exist.values()]):
-                    l.print_event()
-                    new_events.append(l)
-        for l in new_events:
-            c.add_to_gcal(ev_entry=l, calid=_arg)
-    if _command == 'dupe':
+                if not any([e.compare(line) for e in exist.values()]):
+                    line.print_event()
+                    new_events.append(line)
+        for ev_ in new_events:
+            gci.add_to_gcal(ev_entry=ev_, calid=arg_)
+    if command_ == 'dupe':
         keep_dict = {}
         remove_dict = {}
-        c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
+        gci = gcal_instance()
+        exist = gci.get_gcal_events(calid=arg_, callback_fn=process_response)
         for k in sorted(exist.keys()):
-            e = exist[k]
-            ev_key = '%s_%s' % (e.event_time.strftime('%Y-%m-%d'), e.event_name)
+            ev_ = exist[k]
+            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'),
+                                ev_.event_name)
             if ev_key not in keep_dict:
-                keep_dict[ev_key] = e
+                keep_dict[ev_key] = ev_
             else:
                 print(ev_key)
-                e.print_event()
-                remove_dict[ev_key] = e
+                ev_.print_event()
+                remove_dict[ev_key] = ev_
         print('number %d %d' % (len(keep_dict), len(remove_dict)))
         for k in remove_dict:
-            e = remove_dict[k]
-            c.delete_from_gcal(calid=_arg, evid=e.eventId)
-    if _command == 'cal':
-        gcal_instance().get_gcal_events(calid=_arg, callback_fn=simple_response)
-    if _command == 'week':
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
+            ev_ = remove_dict[k]
+            gci.delete_from_gcal(calid=arg_, evid=ev_.event_id)
+    if command_ == 'cal':
+        gcal_instance().get_gcal_events(calid=arg_,
+                                        callback_fn=simple_response)
+    if command_ == 'week':
+        exist = gcal_instance().get_gcal_events(calid=arg_,
+                                                callback_fn=process_response)
         for k in sorted(exist.keys()):
-            e = exist[k]
-            if e.event_time < datetime.datetime.now(tzobj) or e.event_time > datetime.datetime.now(tzobj) + datetime.timedelta(days=7):
+            ev_ = exist[k]
+            if ev_.event_time < datetime.datetime.now(TZOBJ) or \
+                    ev_.event_time > datetime.datetime.now(TZOBJ) + \
+                                     datetime.timedelta(days=7):
                 continue
-            e.print_event()
-    if _command == 'pcal':
-        c = gcal_instance()
-        exist = c.get_gcal_events(calid=_arg, callback_fn=process_response)
+            ev_.print_event()
+    if command_ == 'pcal':
+        gci = gcal_instance()
+        exist = gci.get_gcal_events(calid=arg_, callback_fn=process_response)
         print(len(exist.keys()))
         for k in sorted(exist.keys()):
-            e = exist[k]
-            if e.event_time >= datetime.datetime.now(tzobj):
-                e.print_event()
-            elif 'past' in _args:
-                e.print_event()
-        base_events = []
-    if _command == 'listcal':
+            ev_ = exist[k]
+            if ev_.event_time >= datetime.datetime.now(TZOBJ):
+                ev_.print_event()
+            elif 'past' in args_:
+                ev_.print_event()
+    if command_ == 'listcal':
         gcal_instance().list_gcal_calendars()
-    if _command == 'rm':
-        c = gcal_instance()
-        for arg in _args:
-            c.delete_from_gcal(calid=_arg, evid=arg)
-    if _command == 'search':
+    if command_ == 'rm':
+        gci = gcal_instance()
+        for arg in args_:
+            gci.delete_from_gcal(calid=arg_, evid=arg)
+    if command_ == 'search':
         current_event = callback_class()
-        if _args[0] not in [k.replace('event_', '').replace('event', '') for k in current_event.__dict__.keys()]:
-            print(_args)
+        if args_[0] not in [k.replace('event_', '').replace('event', '')
+                            for k in current_event.__dict__.keys()]:
+            print(args_)
             exit(0)
-        if len(_args) < 2:
-            print(_args)
+        if len(args_) < 2:
+            print(args_)
             exit(0)
-        exist = gcal_instance().get_gcal_events(calid=_arg, callback_fn=process_response)
+        exist = gcal_instance().get_gcal_events(calid=arg_,
+                                                callback_fn=process_response)
 
-        def search_event(e):
-            k = 'event_%s' % _args[0]
-            v0 = _args[1]
-            if k == 'event_time' or k == 'event_end_time':
+        def search_event(ev_):
+            """ Search withing event """
+            key = 'event_%s' % args_[0]
+            v0_ = args_[1]
+            if key == 'event_time' or key == 'event_end_time':
                 import dateutil.parser
-                v0 = dateutil.parser.parse(v0)
-            v = None
-            if k in e.__dict__:
-                v = getattr(e, k)
-                if not v:
+                v0_ = dateutil.parser.parse(v0_)
+            val = None
+            if key in ev_.__dict__:
+                val = getattr(ev_, key)
+                if not val:
                     return
             else:
-                k = 'event%s' % _args[0]
-                if k in e.__dict__:
-                    v = getattr(e, k)
-                    if not v:
+                key = 'event%s' % args_[0]
+                if key in ev_.__dict__:
+                    val = getattr(ev_, key)
+                    if not val:
                         return
-            if type(v0) != datetime.datetime:
-                if v0 not in v:
+            if type(v0_) != datetime.datetime:
+                if v0_ not in val:
                     return
             else:
-                if v < v0:
+                if val < v0_:
                     return
-            e.print_event()
+            ev_.print_event()
 
         print('gcal events')
-        for k in sorted(exist.keys()):
-            search_event(exist[k])
+        for key in sorted(exist.keys()):
+            search_event(exist[key])
 
 
 if __name__ == "__main__":

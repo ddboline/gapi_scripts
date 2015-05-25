@@ -1,86 +1,93 @@
 #!/usr/bin/python
+""" Parse Glirc Webpage Calendar """
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
-import datetime, pytz
+import datetime
 from urllib2 import urlopen
-import random
-from gcal_instance import gcal_instance
 
-from parse_events import base_event, parse_events,\
-    months_short, months_long,\
-    weekdays, tzobj
+from parse_events import BaseEvent, parse_events, MONTHS_LONG, TZOBJ
 
 
-class glirc_event(base_event):
+class GlircEvent(BaseEvent):
+    """ Glirc Event Class """
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
-        base_event.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url, ev_desc=ev_desc, ev_loc=ev_loc)
+        BaseEvent.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url,
+                           ev_desc=ev_desc, ev_loc=ev_loc)
 
 def parse_glirc(url='http://glirc.org/events.php?limit=100'):
-    f = urlopen(url)
+    """ parsing function """
+    url_ = urlopen(url)
 
-    current_event = None
+    current_ev = None
 
-    current_year = datetime.date.today().year
     get_next_line_0 = False
     get_next_line_1 = False
-    for line in f:
+    for line in url_:
         line = line.decode(errors='ignore')
         if get_next_line_1:
-            current_event.event_desc = line.replace('<p>', '').replace('</p>', '').strip()
+            current_ev.event_desc = line.replace('<p>', '')\
+                                        .replace('</p>', '').strip()
             get_next_line_1 = False
         if get_next_line_0:
-            for ent in line.replace('<', '><').replace('>', '><').split('><'):
-                if 'href' in ent and len(current_event.event_url) == 0:
-                    for e in ent.split():
-                        if 'href' in e:
-                            if 'http' not in e:
-                                current_event.event_url = 'http://glirc.org/%s' % e.split('href=')[1].replace('"', '')
+            for ents in line.replace('<', '><').replace('>', '><').split('><'):
+                if 'href' in ents and len(current_ev.event_url) == 0:
+                    for ent in ents.split():
+                        if 'href' in ent:
+                            if 'http' not in ent:
+                                current_ev.event_url = \
+                                    'http://glirc.org/%s' % \
+                                    ent.split('href=')[1].replace('"', '')
                             else:
-                                current_event.event_url = e.split('href=')[1].replace('"', '')
-                elif len(ent.split()) > 0 and ent.split()[0]in months_long:
-                    dstr = ent.replace('|', '').strip()
-                    month = months_long.index(dstr.split()[0]) + 1
+                                current_ev.event_url = ent.split('href=')[1]\
+                                                          .replace('"', '')
+                elif len(ents.split()) > 0 and ents.split()[0]in MONTHS_LONG:
+                    dstr = ents.replace('|', '').strip()
+                    month = MONTHS_LONG.index(dstr.split()[0]) + 1
                     try:
                         day = int(dstr.split()[1].replace(',', ''))
                     except ValueError:
-                        current_event.event_name = dstr
+                        current_ev.event_name = dstr
                         continue
                     year = int(dstr.split()[2])
-                    hour = 9
-                    minute = 0
-                    duration = 60
                     begin_time_str = ''
                     end_time_str = ''
-                    if 'glirc.org' in current_event.event_url:
+                    if 'glirc.org' in current_ev.event_url:
                         try:
-                            for l in urlopen(current_event.event_url):
-                                l = l.decode(errors='ignore')
-                                if 'Time:' in l:
-                                    for k in l.replace('<', '\n').replace('>', '\n').replace('-', '\n').split('\n'):
+                            for line in urlopen(current_ev.event_url):
+                                line = line.decode(errors='ignore')
+                                if 'Time:' in line:
+                                    for k in line.replace('<', '\n')\
+                                                 .replace('>', '\n')\
+                                                 .replace('-', '\n')\
+                                                 .split('\n'):
                                         if 'AM' in k or 'PM' in k:
                                             if len(begin_time_str) == 0:
                                                 begin_time_str = k.strip()
                                             elif len(end_time_str) == 0:
                                                 end_time_str = k.strip()
-                                elif 'Location:' in l:
-                                    current_event.event_location = l.split('<span>')[1].split('</span>')[0]
-                                elif 'var point' in l:
+                                elif 'Location:' in line:
+                                    current_ev.event_location = \
+                                        line.split('<span>')[1]\
+                                            .split('</span>')[0]
+                                elif 'var point' in line:
                                     try:
                                         lat, lng = [float(x) for x in
-                                                    l.split('(')[1].split(')')[0].split(',')[:2]]
-                                        current_event.event_lat = lat
-                                        current_event.event_lon = lng
+                                                    line.split('(')[1]\
+                                                        .split(')')[0]\
+                                                        .split(',')[:2]]
+                                        current_ev.event_lat = lat
+                                        current_ev.event_lon = lng
                                     except ValueError:
                                         pass
                         except Exception as htexc:
-                            print('bad url %s' % current_event.event_url)
-                            print("Exception:", htexc, current_event.event_url, current_event.print_event())
-                            pass
-                    dt = datetime.datetime(year=year, month=month, day=day, hour=9, minute=0, tzinfo=tzobj)
+                            print('bad url %s' % current_ev.event_url)
+                            print("Exception:", htexc, current_ev.event_url,
+                                  current_ev.print_event())
+                    dt_ = datetime.datetime(year=year, month=month, day=day,
+                                           hour=9, minute=0, tzinfo=TZOBJ)
                     if len(begin_time_str) > 0:
                         bhr = int(begin_time_str[0:2])
                         bmn = int(begin_time_str[3:5])
@@ -88,7 +95,9 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                             bhr = 0
                         if 'PM' in begin_time_str and bhr != 12:
                             bhr += 12
-                        dt = datetime.datetime(year=year, month=month, day=day, hour=bhr, minute=bmn, tzinfo=tzobj)
+                        dt_ = datetime.datetime(year=year, month=month,
+                                                day=day, hour=bhr, minute=bmn,
+                                                tzinfo=TZOBJ)
                     if len(end_time_str) > 0:
                         try:
                             ehr = int(end_time_str[0:2])
@@ -97,37 +106,37 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                                 ehr = 0
                             if 'PM' in end_time_str and ehr != 12:
                                 ehr += 12
-                            et = datetime.datetime(year=year, month=month, day=day, hour=ehr, minute=emn, tzinfo=tzobj)
-                            if et <= dt:
-                                et = dt + datetime.timedelta(minutes=60)
+                            et_ = datetime.datetime(year=year, month=month,
+                                                    day=day, hour=ehr,
+                                                    minute=emn, tzinfo=TZOBJ)
+                            if et_ <= dt_:
+                                et_ = dt_ + datetime.timedelta(minutes=60)
                         except ValueError:
                             print('ValueError: %s' % end_time_str)
                     else:
-                        et = dt + datetime.timedelta(minutes=60)
-
-                    d = datetime.datetime(year=year, month=month, day=day)
-                    dt -= tzobj.dst(d)
-                    et -= tzobj.dst(d)
-
-                    current_event.event_time = dt
-                    current_event.event_end_time = et
-
-                elif '<' not in ent and '>' not in ent and len(ent.strip()) > 0:
-                    if len(current_event.event_name) == 0:
-                        current_event.event_name = ent.strip()
+                        et_ = dt_ + datetime.timedelta(minutes=60)
+                    d__ = datetime.datetime(year=year, month=month, day=day)
+                    dt_ -= TZOBJ.dst(d__)
+                    et_ -= TZOBJ.dst(d__)
+                    current_ev.event_time = dt_
+                    current_ev.event_end_time = et_
+                elif '<' not in ents and '>' not in ents and \
+                        len(ents.strip()) > 0:
+                    if len(current_ev.event_name) == 0:
+                        current_ev.event_name = ents.strip()
 
             get_next_line_0 = False
             get_next_line_1 = True
         if 'e-listing-info' in line:
-            if current_event:
-                yield current_event
-            current_event = glirc_event()
+            if current_ev:
+                yield current_ev
+            current_ev = GlircEvent()
 
-            #list_of_events.append(glirc_event())
+            #list_of_events.append(GlircEvent())
             get_next_line_0 = True
-    yield current_event
+    yield current_ev
 
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_glirc, script_name='parse_glirc',
-                 callback_class=glirc_event)
+                 callback_class=GlircEvent)

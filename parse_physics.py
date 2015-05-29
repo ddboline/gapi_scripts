@@ -5,9 +5,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import time
 import datetime
-from urllib2 import urlopen
+import requests
+from requests import HTTPError
+requests.packages.urllib3.disable_warnings()
+
 from util import datetimestring
 
 from parse_events import BaseEvent, parse_events, MONTHS_SHORT,\
@@ -97,11 +99,11 @@ class PhysicsEvent(BaseEvent):
 
 def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
     ''' parse physics web page to get the week's events '''
-    try:
-        url_ = urlopen(url)
-    except Exception:
-        time.sleep(5)
-        url_ = urlopen(url)
+    urlout = requests.get(url)
+    if urlout.status_code != 200:
+        print('something bad happened %d' % urlout.status_code)
+        raise HTTPError
+    url_ = urlout.text.split('\n')
 
     current_event = None
 
@@ -112,7 +114,6 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
     table_entry = []
     last_filled = None
     for line in url_:
-        line = line.decode(errors='ignore')
         if is_main_page:
             if '<!-- thisweek.php starts -->' in line:
                 in_thisweek = True

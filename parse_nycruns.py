@@ -6,7 +6,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-from urllib2 import urlopen
+import requests
+from requests import HTTPError
+requests.packages.urllib3.disable_warnings()
 
 from parse_events import BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,\
                          strip_out_unicode_crap
@@ -52,8 +54,14 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
     """ parsing function """
     current_event = None
     event_buffer = []
-    for line in urlopen(url):
-        line = line.decode(errors='ignore')
+    
+    urlout = requests.get(url)
+    if urlout.status_code != 200:
+        print('something bad happened %d' % urlout.status_code)
+        raise HTTPError
+    url_ = urlout.text.split('\n')
+    
+    for line in url_:
         if 'class="event"' in line:
             current_event = NycRunsEvent()
         if not current_event:
@@ -93,15 +101,16 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                     current_event.event_location = ' '.join(ent[2:])\
                                                       .replace('|', ',')
             event_buffer2 = []
-            try:
-                url_ = urlopen(current_event.event_url)
-            except ValueError:
-                print(current_event.event_url)
+            
+            if not current_event.event_url:
                 continue
-            if url_.getcode() != 200:
+            urlout2 = requests.get(current_event.event_url)
+            if urlout2.status_code != 200:
+                print('something bad happened %d' % urlout2.status_code)
                 continue
-            for line in url_:
-                line = line.decode(errors='ignore')
+            url2_ = urlout2.text.split('\n')
+
+            for line in url2_:
                 if 'race-info' in line:
                     event_buffer2.append(line)
                 if not event_buffer2:

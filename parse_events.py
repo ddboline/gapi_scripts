@@ -85,7 +85,7 @@ class BaseEvent(object):
             id_list.append('%s%s' % (k, self.__dict__[k]))
         id_str = ''.join(id_list)
         md_ = hashlib.md5()
-        md_.update(id_str)
+        md_.update(id_str.encode(errors='ignore'))
         self.event_id = md_.hexdigest()
         return self.event_id
 

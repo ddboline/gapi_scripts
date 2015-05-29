@@ -6,7 +6,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-from urllib2 import urlopen
+import requests
+from requests import HTTPError
+requests.packages.urllib3.disable_warnings()
 
 from parse_events import BaseEvent, parse_events, MONTHS_LONG, TZOBJ
 
@@ -19,14 +21,17 @@ class GlircEvent(BaseEvent):
 
 def parse_glirc(url='http://glirc.org/events.php?limit=100'):
     """ parsing function """
-    url_ = urlopen(url)
+    urlout = requests.get(url)
+    if urlout.status_code != 200:
+        print('something bad happened %d' % urlout.status_code)
+        raise HTTPError
+    url_ = urlout.text.split('\n')
 
     current_ev = None
 
     get_next_line_0 = False
     get_next_line_1 = False
     for line in url_:
-        line = line.decode(errors='ignore')
         if get_next_line_1:
             current_ev.event_desc = line.replace('<p>', '')\
                                         .replace('</p>', '').strip()
@@ -56,8 +61,8 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                     end_time_str = ''
                     if 'glirc.org' in current_ev.event_url:
                         try:
-                            for line in urlopen(current_ev.event_url):
-                                line = line.decode(errors='ignore')
+                            for line in requests.get(current_ev.event_url)\
+                                                .text.split('\n'):
                                 if 'Time:' in line:
                                     for k in line.replace('<', '\n')\
                                                  .replace('>', '\n')\

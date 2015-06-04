@@ -305,10 +305,10 @@ class GdriveInstance(object):
             if os.path.exists(exportfile):
                 mtime_cur = int(os.stat(exportfile).st_mtime)
                 if exportfile in self.gdrive_md5_cache:
-                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
-                    if _md5 == md5chksum and mtime >= _mtime:
+                    _md5, mtime_ = self.gdrive_md5_cache[exportfile]
+                    if _md5 == md5chksum and mtime >= mtime_:
                         print('%s %s in cache %s %s' % (_md5, exportfile,
-                                                        mtime, _mtime))
+                                                        mtime, mtime_))
                         continue
                 elif md5chksum == get_md5(exportfile):
                     print('%s %s exists' % (md5chksum, exportfile))
@@ -319,11 +319,7 @@ class GdriveInstance(object):
                 else:
                     print('md5 %s' % md5chksum)
 
-            try:
-                resp, url_ = self.service._http.request(dlink)
-            except Exception as exc:
-                print('Exception %s' % exc)
-                continue
+            resp, url_ = self.service._http.request(dlink)
             if resp['status'] != '200':
                 print(title, dlink)
                 print('something bad happened %s' % resp)
@@ -342,14 +338,15 @@ class GdriveInstance(object):
         """ scan local directory """
         md5_file_index = defaultdict(list)
         files_not_in_cache = defaultdict(list)
-        def parse_dir(arg, path, filelist):
+        def parse_dir(_, path, filelist):
+            """ callback function for walk """
             for fn_ in filelist:
                 exportfile = '%s/%s' % (path, fn_)
                 if os.path.isdir(exportfile):
                     continue
                 if exportfile in self.gdrive_md5_cache:
-                    _md5, _mtime = self.gdrive_md5_cache[exportfile]
-                    md5_file_index[_md5].append(exportfile)
+                    md5_, _ = self.gdrive_md5_cache[exportfile]
+                    md5_file_index[md5_].append(exportfile)
                 else:
                     md5sum = get_md5(exportfile)
 #                    print('%s %s' % (md5sum, exportfile))
@@ -363,13 +360,16 @@ class GdriveInstance(object):
 #            os.remove(files_not_in_cache[md5sum][0])
         return
 
+COMMANDS = ('list', 'sync', 'search', 'download', 'upload', 'directories',
+            'parent', 'delete', 'new')
+
 def list_drive_files():
+    """ main routine, parse arguments """
     cmd = 'list'
     search_strings = []
     parent_directory = None
     number_to_list = 100
-    COMMANDS = ['list', 'sync', 'search', 'download', 'upload', 'directories',
-                'parent', 'delete', 'new']
+
     for arg in os.sys.argv:
         if 'list_drive_files.py' in arg:
             continue

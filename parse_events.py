@@ -33,17 +33,24 @@ def strip_out_unicode_crap(inpstr):
 
 class BaseEvent(object):
     """ Base Event Class """
+
+    __slots__ = ['event_time', 'event_end_time', 'event_url', 'event_name',
+                 'event_desc', 'event_location', 'event_lat', 'event_lon',
+                 'event_id']
+
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
         """ Init Method """
+        for attr in self.__slots__:
+            setattr(self, attr, None)
         self.event_time = dt
         self.event_end_time = dt
         self.event_url = ev_url
         self.event_name = ev_name
         self.event_desc = ev_desc
         self.event_location = ev_loc
+        self.event_id = None
         self.event_lat = None
         self.event_lon = None
-        self.event_id = None
 
     def compare(self, obj, partial_match=None):
         """ Compre event objects """
@@ -173,6 +180,7 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             ts_.read_gcal_event(item)
             kstr = '%s %s' % (ts_.event_time, ts_.event_id)
             outlist[kstr] = ts_
+        return outlist
 
     def simple_response(response, outlist=None):
         """ Simple Responce fn """
@@ -180,6 +188,7 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             for key, it_ in item.items():
                 print('%s: %s' % (key, it_))
             print('')
+        return outlist
 
     if not parser_callback:
         return
@@ -244,12 +253,12 @@ def parse_events(parser_callback=None, script_name='', calid=None,
     if command_ == 'post':
         new_events = []
         gci = gcal_instance()
-        try:
+        if os.path.exists('.tmp_%s.pkl.gz' % script_name):
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'rb') as pkl_file:
                 new_events = pickle.load(pkl_file)
             os.remove('.tmp_%s.pkl.gz' % script_name)
-        except Exception as exc:
-            print('no pickle file', exc)
+        else:
+            print('no pickle file')
             exist = gci.get_gcal_events(calid=arg_,
                                         callback_fn=process_response)
             for line in parser_callback():

@@ -54,13 +54,13 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
     """ parsing function """
     current_event = None
     event_buffer = []
-    
+
     urlout = requests.get(url)
     if urlout.status_code != 200:
         print('something bad happened %d' % urlout.status_code)
         raise HTTPError
     url_ = urlout.text.split('\n')
-    
+
     for line in url_:
         if 'class="event"' in line:
             current_event = NycRunsEvent()
@@ -101,7 +101,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                     current_event.event_location = ' '.join(ent[2:])\
                                                       .replace('|', ',')
             event_buffer2 = []
-            
+
             if not current_event.event_url:
                 continue
             urlout2 = requests.get(current_event.event_url)

@@ -13,12 +13,6 @@ requests.packages.urllib3.disable_warnings()
 from parse_events import BaseEvent, parse_events, MONTHS_LONG, TZOBJ
 
 
-class GlircEvent(BaseEvent):
-    """ Glirc Event Class """
-    def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
-        BaseEvent.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url,
-                           ev_desc=ev_desc, ev_loc=ev_loc)
-
 def parse_glirc(url='http://glirc.org/events.php?limit=100'):
     """ parsing function """
     urlout = requests.get(url)
@@ -135,7 +129,7 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
         if 'e-listing-info' in line:
             if current_ev:
                 yield current_ev
-            current_ev = GlircEvent()
+            current_ev = BaseEvent()
 
             #list_of_events.append(GlircEvent())
             get_next_line_0 = True
@@ -144,4 +138,4 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_glirc, script_name='parse_glirc',
-                 callback_class=GlircEvent)
+                 callback_class=BaseEvent)

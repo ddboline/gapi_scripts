@@ -50,3 +50,17 @@ def get_md5(fname):
     """ wrapper around md5sum """
     _cmd = 'md5sum %s 2> /dev/null' % cleanup_path(fname)
     return run_command(_cmd, do_popen=True).read().split()[0]
+
+def openurl(url_):
+    """ wrapper around requests.get.text simulating urlopen """
+    import requests
+    from requests import HTTPError
+    try:
+        requests.packages.urllib3.disable_warnings()
+    except AttributeError:
+        pass
+    urlout = requests.get(url_, verify=False)
+    if urlout.status_code != 200:
+        print('something bad happened %d' % urlout.status_code)
+        raise HTTPError
+    return urlout.text.split('\n')

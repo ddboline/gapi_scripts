@@ -6,20 +6,26 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-import requests
-from requests import HTTPError
-requests.packages.urllib3.disable_warnings()
 
 from parse_events import BaseEvent, parse_events, MONTHS_LONG, TZOBJ
 
-
-def parse_glirc(url='http://glirc.org/events.php?limit=100'):
-    """ parsing function """
-    urlout = requests.get(url)
+def openurl(url_):
+    """ wrapper around requests.get.text simulating urlopen """
+    import requests
+    from requests import HTTPError
+    try:
+        requests.packages.urllib3.disable_warnings()
+    except AttributeError:
+        pass
+    urlout = requests.get(url_, verify=False)
     if urlout.status_code != 200:
         print('something bad happened %d' % urlout.status_code)
         raise HTTPError
-    url_ = urlout.text.split('\n')
+    return urlout.text.split('\n')
+
+def parse_glirc(url='http://glirc.org/events.php?limit=100'):
+    """ parsing function """
+    url_ = openurl(url)
 
     current_ev = None
 
@@ -54,37 +60,31 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                     begin_time_str = ''
                     end_time_str = ''
                     if 'glirc.org' in current_ev.event_url:
-                        try:
-                            for line in requests.get(current_ev.event_url)\
-                                                .text.split('\n'):
-                                if 'Time:' in line:
-                                    for k in line.replace('<', '\n')\
-                                                 .replace('>', '\n')\
-                                                 .replace('-', '\n')\
-                                                 .split('\n'):
-                                        if 'AM' in k or 'PM' in k:
-                                            if len(begin_time_str) == 0:
-                                                begin_time_str = k.strip()
-                                            elif len(end_time_str) == 0:
-                                                end_time_str = k.strip()
-                                elif 'Location:' in line:
-                                    current_ev.event_location = \
-                                        line.split('<span>')[1]\
-                                            .split('</span>')[0]
-                                elif 'var point' in line:
-                                    try:
-                                        lat, lng = [float(x) for x in
-                                                    line.split('(')[1]\
-                                                        .split(')')[0]\
-                                                        .split(',')[:2]]
-                                        current_ev.event_lat = lat
-                                        current_ev.event_lon = lng
-                                    except ValueError:
-                                        pass
-                        except Exception as htexc:
-                            print('bad url %s' % current_ev.event_url)
-                            print("Exception:", htexc, current_ev.event_url,
-                                  current_ev.print_event())
+                        for line in openurl(current_ev.event_url):
+                            if 'Time:' in line:
+                                for k in line.replace('<', '\n')\
+                                             .replace('>', '\n')\
+                                             .replace('-', '\n')\
+                                             .split('\n'):
+                                    if 'AM' in k or 'PM' in k:
+                                        if len(begin_time_str) == 0:
+                                            begin_time_str = k.strip()
+                                        elif len(end_time_str) == 0:
+                                            end_time_str = k.strip()
+                            elif 'Location:' in line:
+                                current_ev.event_location = \
+                                    line.split('<span>')[1]\
+                                        .split('</span>')[0]
+                            elif 'var point' in line:
+                                try:
+                                    lat, lng = [float(x) for x in
+                                                line.split('(')[1]\
+                                                    .split(')')[0]\
+                                                    .split(',')[:2]]
+                                    current_ev.event_lat = lat
+                                    current_ev.event_lon = lng
+                                except ValueError:
+                                    pass
                     dt_ = datetime.datetime(year=year, month=month, day=day,
                                            hour=9, minute=0, tzinfo=TZOBJ)
                     if len(begin_time_str) > 0:

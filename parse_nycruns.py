@@ -6,10 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-import requests
-from requests import HTTPError
-requests.packages.urllib3.disable_warnings()
-
+from util import openurl
 from parse_events import BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,\
                          strip_out_unicode_crap
 
@@ -55,11 +52,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
     current_event = None
     event_buffer = []
 
-    urlout = requests.get(url)
-    if urlout.status_code != 200:
-        print('something bad happened %d' % urlout.status_code)
-        raise HTTPError
-    url_ = urlout.text.split('\n')
+    url_ = openurl(url)
 
     for line in url_:
         if 'class="event"' in line:
@@ -104,11 +97,7 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
 
             if not current_event.event_url:
                 continue
-            urlout2 = requests.get(current_event.event_url)
-            if urlout2.status_code != 200:
-                print('something bad happened %d' % urlout2.status_code)
-                continue
-            url2_ = urlout2.text.split('\n')
+            url2_ = openurl(current_event.event_url)
 
             for line in url2_:
                 if 'race-info' in line:

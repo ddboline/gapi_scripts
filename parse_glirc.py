@@ -6,22 +6,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
-
+from util import openurl
 from parse_events import BaseEvent, parse_events, MONTHS_LONG, TZOBJ
-
-def openurl(url_):
-    """ wrapper around requests.get.text simulating urlopen """
-    import requests
-    from requests import HTTPError
-    try:
-        requests.packages.urllib3.disable_warnings()
-    except AttributeError:
-        pass
-    urlout = requests.get(url_, verify=False)
-    if urlout.status_code != 200:
-        print('something bad happened %d' % urlout.status_code)
-        raise HTTPError
-    return urlout.text.split('\n')
 
 def parse_glirc(url='http://glirc.org/events.php?limit=100'):
     """ parsing function """

@@ -94,7 +94,10 @@ def print_todays_agenda():
     if not os.path.exists(cachefile) or convert_time_date(time.time()) > \
             convert_time_date(os.stat(cachefile).st_mtime) or force_update:
         with open(cachefile, 'w') as infile:
-            infile.write(get_agenda())
+            try:
+                infile.write(get_agenda())
+            except TypeError:
+                infile.write(get_agenda().decode())
     with open(cachefile, 'r') as infile:
         outstr = infile.readlines()
     return ''.join(outstr)

@@ -86,10 +86,10 @@ class BaseEvent(object):
         """ Create unique ID """
         import hashlib
         id_list = []
-        for k in sorted(self.__dict__.keys()):
+        for k in sorted(self.__slots__):
             if k == 'event_id':
                 continue
-            id_list.append('%s%s' % (k, self.__dict__[k]))
+            id_list.append('%s%s' % (k, getattr(self, k)))
         id_str = ''.join(id_list)
         md_ = hashlib.md5()
         md_.update(id_str.encode(errors='ignore'))

@@ -53,7 +53,10 @@ class gcal_instance(object):
         list_of_gcal_events = {}
 
         if do_single_events:
-            from util import datetimestring
+            try:
+                from util import datetimestring
+            except ImportError:
+                from scripts.util import datetimestring
             import datetime
             mintime = datetimestring(datetime.datetime.now() -
                                      datetime.timedelta(days=1))

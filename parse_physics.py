@@ -8,7 +8,10 @@ from __future__ import unicode_literals
 import datetime
 import requests
 from requests import HTTPError
-requests.packages.urllib3.disable_warnings()
+try:
+    requests.packages.urllib3.disable_warnings()
+except AttributeError:
+    pass
 
 from util import datetimestring
 

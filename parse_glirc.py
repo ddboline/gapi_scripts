@@ -48,7 +48,15 @@ def parse_glirc(url='http://glirc.org/events.php?limit=100'):
                     end_time_str = ''
                     if 'glirc.org' in current_ev.event_url:
                         try:
-                            for line in openurl(current_ev.event_url):
+                            url_ = openurl(current_ev.event_url)
+                        except HTTPError as exc:
+                            url_idx_ = current_ev.event_url.split('/')[3]\
+                                                           .replace('.php', '')
+                            current_ev.event_url = \
+                                'http://glirc.org/index.php?id=%s' % url_idx_
+                            url_ = openurl(current_ev.event_url)
+                        try:
+                            for line in url_:
                                 if 'Time:' in line:
                                     for k in line.replace('<', '\n')\
                                                  .replace('>', '\n')\

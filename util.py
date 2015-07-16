@@ -61,6 +61,6 @@ def openurl(url_):
         pass
     urlout = requests.get(url_, verify=False)
     if urlout.status_code != 200:
-        print('something bad happened %d' % urlout.status_code)
+        print('something bad happened %d %s' % (urlout.status_code, url_))
         raise HTTPError
     return urlout.text.split('\n')

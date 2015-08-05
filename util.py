@@ -60,7 +60,7 @@ def openurl(url_):
     except AttributeError:
         pass
     urlout = requests.get(url_, verify=False)
-    if urlout.status_code != 200:
+    if urlout.status_code not in [200, 300, 301]:
         print('something bad happened %d %s' % (urlout.status_code, url_))
         raise HTTPError
     return urlout.text.split('\n')

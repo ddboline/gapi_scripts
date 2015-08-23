@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo /opt/conda/bin/conda install -c https://conda.anaconda.org/ddboline --yes pytz dateutil google-api-python-client
+sudo /opt/conda/bin/conda install -c https://conda.anaconda.org/ddboline --yes pytz dateutil google-api-python-client nose
 
 # sudo apt-get install -y python-googleapi python-tz python-dateutil
 # sudo apt-get install -y python3-googleapi python3-tz python3-dateutil

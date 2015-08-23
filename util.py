@@ -23,13 +23,11 @@ def run_command(command, do_popen=False, turn_on_commands=True):
 
 def cleanup_path(orig_path):
     """ cleanup path string using escape character """
-    return orig_path.replace(' ', r'\ ').replace('(', r'\(')\
-                    .replace(')', r'\)').replace('\'', r'\\\'')\
-                    .replace('[', r'\[').replace(']', r'\]')\
-                    .replace('"', r'\"').replace("'", r"\'")\
-                    .replace('&', r'\&').replace(',', r'\,')\
-                    .replace('!', r'\!').replace(';', r'\;')\
-                    .replace('$', r'\$')
+    chars_to_escape = ' ()"[]&,!;$' + "'"
+    for ch_ in chars_to_escape:
+        orig_path = orig_path.replace(ch_, r'\%c' % ch_)
+    return orig_path
+
 
 def datetimestring(dt_):
     ''' input should be datetime object, output is string '''
@@ -64,3 +62,35 @@ def openurl(url_):
         print('something bad happened %d %s' % (urlout.status_code, url_))
         raise HTTPError
     return urlout.text.split('\n')
+
+def test_run_command():
+    cmd = 'echo "HELLO"'
+    out = run_command(cmd, do_popen=True).read().strip()
+    print(out, cmd)
+    assert out == b'HELLO'
+
+def test_cleanup_path():
+    INSTR = '/home/ddboline/THIS TEST PATH (OR SOMETHING LIKE IT) [OR OTHER!] & ELSE $;,""'
+    OUTSTR = r'/home/ddboline/THIS\ TEST\ PATH\ \(OR\ SOMETHING\ LIKE\ IT\)\ \[OR\ OTHER\!\]\ \&\ ELSE\ \$\;\,\"\"'
+    print(cleanup_path(INSTR))
+    assert cleanup_path(INSTR) == OUTSTR
+
+def test_datetimestring():
+    import datetime
+    dt = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13)
+    assert datetimestring(dt) == '1980-11-17T05:12:13Z'
+
+def test_datetimefromstring():
+    import datetime
+    from pytz import UTC
+    dt0 = '1980-11-17T05:12:13Z'
+    dt1 = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13, tzinfo=UTC)
+    assert datetimefromstring(dt0) == dt1
+
+def test_get_md5():
+    import tempfile
+    with tempfile.NamedTemporaryFile() as tfi:
+        tfi.write(b'HELLO\n')
+        tfi.flush()
+        out = get_md5(tfi.name)
+        assert out == b'0084467710d2fc9d8a306e14efbe6d0f'

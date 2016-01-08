@@ -80,8 +80,11 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                 if len(ent) == 0:
                     continue
                 if 'event-year' in ent[0]:
-                    yr_ = int(ent[1])
-                if 'event-month' in ent[0]:
+                    try:
+                        yr_ = int(ent[1])
+                    except ValueError:
+                        pass
+                if 'event-month' in ent[0] and ent[1] in MONTHS_SHORT:
                     mn_ = MONTHS_SHORT.index(ent[1])+1
                 if 'event-day' in ent[0]:
                     dy_ = int(ent[1])

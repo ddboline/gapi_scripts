@@ -1,15 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Utility functions """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import os
 from subprocess import call, Popen, PIPE
 
 HOMEDIR = os.getenv('HOME')
+
 
 def run_command(command, do_popen=False, turn_on_commands=True):
     ''' wrapper around os.system '''
@@ -20,6 +18,7 @@ def run_command(command, do_popen=False, turn_on_commands=True):
         return Popen(command, shell=True, stdout=PIPE, close_fds=True).stdout
     else:
         return call(command, shell=True)
+
 
 def cleanup_path(orig_path):
     """ cleanup path string using escape character """
@@ -39,15 +38,18 @@ def datetimestring(dt_):
     elif len(st_) == 19 and 'Z' not in st_:
         return '%sZ' % st_
 
+
 def datetimefromstring(tstr, ignore_tz=False):
     """ wrapper around dateutil.parser.parse """
     from dateutil.parser import parse
     return parse(tstr, ignoretz=ignore_tz)
 
+
 def get_md5(fname):
     """ wrapper around md5sum """
     _cmd = 'md5sum %s 2> /dev/null' % cleanup_path(fname)
     return run_command(_cmd, do_popen=True).read().split()[0]
+
 
 def openurl(url_):
     """ wrapper around requests.get.text simulating urlopen """
@@ -63,29 +65,39 @@ def openurl(url_):
         raise HTTPError
     return urlout.text.split('\n')
 
+
 def test_run_command():
     cmd = 'echo "HELLO"'
     out = run_command(cmd, do_popen=True).read().strip()
     print(out, cmd)
     assert out == b'HELLO'
 
+
 def test_cleanup_path():
-    INSTR = '/home/ddboline/THIS TEST PATH (OR SOMETHING LIKE IT) [OR OTHER!] & ELSE $;,""'
-    OUTSTR = r'/home/ddboline/THIS\ TEST\ PATH\ \(OR\ SOMETHING\ LIKE\ IT\)\ \[OR\ OTHER\!\]\ \&\ ELSE\ \$\;\,\"\"'
+    INSTR = '/home/ddboline/THIS TEST PATH (OR SOMETHING LIKE IT) ' \
+            '[OR OTHER!] & ELSE $;,""'
+    OUTSTR = r'/home/ddboline/THIS\ TEST\ PATH\ ' \
+             r'\(OR\ SOMETHING\ LIKE\ IT\)\ \[OR\ OTHER\!\]\ \&\ ' \
+             r'ELSE\ \$\;\,\"\"'
     print(cleanup_path(INSTR))
     assert cleanup_path(INSTR) == OUTSTR
 
+
 def test_datetimestring():
     import datetime
-    dt = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13)
+    dt = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12,
+                           second=13)
     assert datetimestring(dt) == '1980-11-17T05:12:13Z'
+
 
 def test_datetimefromstring():
     import datetime
     from pytz import UTC
     dt0 = '1980-11-17T05:12:13Z'
-    dt1 = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13, tzinfo=UTC)
+    dt1 = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12,
+                            second=13, tzinfo=UTC)
     assert datetimefromstring(dt0) == dt1
+
 
 def test_get_md5():
     import tempfile

@@ -1,14 +1,12 @@
 #!/usr/bin/python
 """ Parse NYCRuns Webpage Calendar """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import datetime
 from util import openurl
-from parse_events import BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,\
-                         strip_out_unicode_crap
+from parse_events import (BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,
+                          strip_out_unicode_crap)
+CALID = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
 
 
 class NycRunsEvent(BaseEvent):
@@ -146,10 +144,10 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
                     current_event.event_lat, current_event.event_lon = lat, lon
             current_event.event_time = datetime.datetime(year=yr_, month=mn_,
                                                          day=dy_, hour=hr_,
-                                                         minute=me_,
-                                                         tzinfo=TZOBJ)
-            current_event.event_end_time = current_event.event_time + \
-                                           datetime.timedelta(minutes=60)
+                                                         minute=me_)
+            current_event.event_time = TZOBJ.localize(current_event.event_time)
+            current_event.event_end_time = (current_event.event_time +
+                                            datetime.timedelta(minutes=60))
             yield current_event
             current_event = NycRunsEvent()
             event_buffer = []
@@ -157,4 +155,4 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_nycruns, script_name='parse_nycruns',
-                 callback_class=NycRunsEvent)
+                 callback_class=NycRunsEvent, calid=CALID)

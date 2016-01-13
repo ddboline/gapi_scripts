@@ -1,14 +1,13 @@
 #!/usr/bin/python
 """ Base module for Parsing events """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import os
 import re
 import gzip
-import datetime, pytz
+import datetime
+import pytz
+
 from util import datetimestring, datetimefromstring
 from gcal_instance import gcal_instance
 
@@ -27,9 +26,11 @@ BUILDINGS = ['Math Tower', 'Harriman Hall', 'Grad. Physics', 'ESS']
 
 TZOBJ = pytz.timezone("US/Eastern")
 
+
 def strip_out_unicode_crap(inpstr):
     """ remove non-ascii characters (could've used easier method) """
     return re.sub(r'[^\x00-\x7F]', '', inpstr)
+
 
 class BaseEvent(object):
     """ Base Event Class """
@@ -103,19 +104,20 @@ class BaseEvent(object):
         else:
             loc_str = self.event_location
         return {'creator':
-                    {'self': True, 'displayName': 'Daniel Boline',
-                     'email': 'ddboline@gmail.com'},
+                {'self': True, 'displayName': 'Daniel Boline',
+                 'email': 'ddboline@gmail.com'},
                 'originalStartTime':
-                    {'dateTime': datetimestring(self.event_time)},
+                {'dateTime': datetimestring(self.event_time)},
                 'organizer':
-                    {'self': True, 'displayName': 'Daniel Boline',
-                     'email': 'ddboline@gmail.com'},
+                {'self': True, 'displayName': 'Daniel Boline',
+                 'email': 'ddboline@gmail.com'},
                 'location': loc_str,
                 'summary': self.event_name,
                 'description': 'Location: %s\nDescription: %s\n%s'
-                    % (self.event_location, self.event_desc, self.event_url),
-                'start': {'dateTime': datetimestring(self.event_time)},
-                'end': {'dateTime': datetimestring(self.event_end_time)},}
+                % (self.event_location, self.event_desc, self.event_url),
+                'start':
+                {'dateTime': datetimestring(self.event_time)},
+                'end': {'dateTime': datetimestring(self.event_end_time)}}
 
     def read_gcal_event(self, obj):
         """ Read GCalendar Event """
@@ -128,10 +130,10 @@ class BaseEvent(object):
             tstr = obj['start']['date']
             ts_ = [int(x) for x in (tstr[0:4], tstr[5:7], tstr[8:10])]
             self.event_time = datetime.datetime(year=ts_[0], month=ts_[1],
-                                                day=ts_[2], hour=9, minute=0,
-                                                tzinfo=TZOBJ)
-            self.event_end_time = self.event_time + \
-                                  datetime.timedelta(minutes=60)
+                                                day=ts_[2], hour=9, minute=0)
+            self.event_time = TZOBJ.localize(self.event_time)
+            self.event_end_time = (self.event_time
+                                   + datetime.timedelta(minutes=60))
         else:
             print(obj)
             exit(0)
@@ -146,9 +148,8 @@ class BaseEvent(object):
                     self.event_desc = ' '.join(ent.split()[1:])
         if 'location' in obj:
             try:
-                self.event_lat, self.event_lon = [float(x) for x in
-                                                  obj['location']\
-                                                      .split(',')[:2]]
+                self.event_lat, self.event_lon = [
+                    float(x) for x in obj['location'].split(',')[:2]]
             except ValueError:
                 pass
         self.event_id = obj['id']
@@ -160,7 +161,7 @@ class BaseEvent(object):
                 '\t url: %s' % self.event_url,
                 '\t name: %s' % strip_out_unicode_crap(self.event_name),
                 '\t description: %s' % self.event_desc,
-                '\t location: %s' %  self.event_location]
+                '\t location: %s' % self.event_location]
         if type(self.event_lat) == float and type(self.event_lon) == float:
             ostr[-1] += ' %f,%f' % (self.event_lat, self.event_lon)
         if not self.event_id:
@@ -297,8 +298,8 @@ def parse_events(parser_callback=None, script_name='', calid=None,
         for k in sorted(exist.keys()):
             ev_ = exist[k]
             if ev_.event_time < datetime.datetime.now(TZOBJ) or \
-                    ev_.event_time > datetime.datetime.now(TZOBJ) + \
-                                     datetime.timedelta(days=7):
+                    ev_.event_time > (datetime.datetime.now(TZOBJ)
+                                      + datetime.timedelta(days=7)):
                 continue
             ev_.print_event()
     if command_ == 'pcal':
@@ -361,5 +362,5 @@ def parse_events(parser_callback=None, script_name='', calid=None,
 
 
 if __name__ == "__main__":
-    print('this doesn\'t work by itself')
-    exit(0)
+    parse_events(parser_callback=lambda : [], script_name='parse_event',
+                 calid=None, callback_class=None)

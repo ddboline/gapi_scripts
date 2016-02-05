@@ -3,9 +3,14 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import datetime
-from util import openurl
+import requests
+from bs4 import BeautifulSoup
 from parse_events import (BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,
                           strip_out_unicode_crap)
+try:
+    requests.packages.urllib3.disable_warnings()
+except AttributeError:
+    pass
 CALID = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
 
 
@@ -45,112 +50,71 @@ class NycRunsEvent(BaseEvent):
             return False
 
 
+def parse_event_tag(li_tag):
+    current_event = NycRunsEvent()
+    yr_, mn_, dy_, hr_, me_ = 2015, 1, 1, 9, 0
+    for div in li_tag.find_all('div'):
+        if 'event-year' in div.attrs.get('class', []):
+            yr_ = int(div.text)
+        elif 'event-month' in div.attrs.get('class', []):
+            ent = div.text.strip()
+            if ent in MONTHS_SHORT:
+                mn_ = MONTHS_SHORT.index(ent)+1
+        elif 'event-day' in div.attrs.get('class', []):
+            dy_ = int(div.text)
+
+    for a in li_tag.find_all('a'):
+        if 'event-link' in a.attrs.get('class', []):
+            current_event.event_url = a.attrs.get('href')
+        elif 'event-name' in a.attrs.get('class', []):
+            current_event.event_name = a.text
+        elif 'event-location' in a.attrs.get('class', []):
+            current_event.event_location = a.text
+
+    resp = requests.get(current_event.event_url)
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    for div in soup.find_all('div'):
+        if 'race-display-date' in div.attrs.get('class', []):
+            clean_text = '%s' % div
+            clean_text = clean_text.replace('>', '>\n')
+            clean_text = BeautifulSoup(clean_text, 'html.parser').text
+            clean_text = clean_text.split('Start time:')[1].strip()
+            clean_text = clean_text.lower()
+            clean_text = clean_text.replace('am', ' am').replace('pm', ' pm')
+            ent = clean_text.split('\n')[0].split()
+            for num in range(len(ent)-1):
+                try:
+                    hr_, me_ = [int(x) for x in ent[num].split(':')[:2]]
+                except:
+                    continue
+                if 'pm' in ent[num+1]:
+                    hr_ += 12
+
+    for script in soup.find_all('script'):
+        if 'initialize' in script.text:
+            clean_text = script.text.replace("'", "")
+            clean_text = clean_text.replace('initialize(', '').replace(')', '')
+            lat, lon = [float(x) for x in clean_text.split(',')[:2]]
+            current_event.event_lat, current_event.event_lon = lat, lon
+
+    current_event.event_time = datetime.datetime(year=yr_, month=mn_, day=dy_,
+                                                 hour=hr_, minute=me_)
+    current_event.event_time = TZOBJ.localize(current_event.event_time)
+    current_event.event_end_time = (current_event.event_time +
+                                    datetime.timedelta(minutes=60))
+
+    return current_event
+
+
 def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
     """ parsing function """
-    current_event = None
-    event_buffer = []
+    resp = requests.get(url)
+    soup = BeautifulSoup(resp.text, 'html.parser')
 
-    url_ = openurl(url)
-
-    for line in url_:
-        if 'class="event"' in line:
-            current_event = NycRunsEvent()
-        if not current_event:
-            continue
-        else:
-            event_buffer.append(line.strip())
-
-        if '</li>' in line:
-            event_string = ''.join(event_buffer)
-            for ch_ in ['div', 'a']:
-                event_string = event_string.replace('<%s' % ch_, '\n')\
-                                           .replace('</%s' % ch_, '')\
-                                           .replace('>', ' ')
-            for ch_ in ['span']:
-                event_string = event_string.replace('<%s' % ch_, '')\
-                                           .replace('</%s' % ch_, '')\
-                                           .replace('>', ' ')
-            event_string = event_string.replace('style=""', '')\
-                                       .replace(' "', '"')
-            yr_, mn_, dy_, hr_, me_ = 2015, 1, 1, 9, 0
-            for line in event_string.split('\n'):
-                ent = line.split()
-                if len(ent) == 0:
-                    continue
-                if 'event-year' in ent[0]:
-                    try:
-                        yr_ = int(ent[1])
-                    except ValueError:
-                        pass
-                if 'event-month' in ent[0] and ent[1] in MONTHS_SHORT:
-                    mn_ = MONTHS_SHORT.index(ent[1])+1
-                if 'event-day' in ent[0]:
-                    dy_ = int(ent[1])
-                if 'event-link' in ent[0]:
-                    current_event.event_url = ent[1].replace('href=', '')\
-                                                    .replace('"', '')
-                if 'event-name' in ent[0]:
-                    current_event.event_name = ' '.join(ent[2:]).strip()
-                if 'event-location' in ent[0]:
-                    current_event.event_location = ' '.join(ent[2:])\
-                                                      .replace('|', ',')
-            event_buffer2 = []
-
-            if not current_event.event_url:
-                continue
-            url2_ = openurl(current_event.event_url)
-
-            for line in url2_:
-                if 'race-info' in line:
-                    event_buffer2.append(line)
-                if not event_buffer2:
-                    continue
-
-                event_buffer2.append(line.strip())
-                if 'race-display-terms' in line:
-                    break
-            event_string = ''.join(event_buffer2)
-            for ch_ in ['div', 'a', 'h2', 'script', 'strong']:
-                event_string = event_string.replace('<%s' % ch_, '\n')\
-                                           .replace('</%s' % ch_, '')\
-                                           .replace('>', ' ')
-            for line in event_string.split('\n'):
-                ent = line.replace('time:', '').replace('Start time:', '')\
-                          .split()
-                if len(ent) < 2:
-                    continue
-                if 'Start time:' in line:
-                    for num in range(len(ent)):
-                        if ':' not in ent[num]:
-                            continue
-                        try:
-                            hr_, me_ = [int(x) for x in ent[num].split(':')]
-                            st_ = ent[num+1].lower()
-                        except ValueError:
-                            try:
-                                val, st_ = ent[num].lower().replace(';', ' ')\
-                                                   .replace('am', ' am')\
-                                                   .replace('pm', ' pm')\
-                                                   .split()
-                                hr_, me_ = [int(x) for x in val.split(':')[:2]]
-                            except ValueError:
-                                continue
-                        if 'pm' in st_.lower() and hr_ != 12:
-                            hr_ += 12
-                if 'initialize(' in ent[0]:
-                    lat, lon = [float(x) for x in
-                                ent[0].replace("'", '').replace(
-                                    'initialize(', '').split(',')[:2]]
-                    current_event.event_lat, current_event.event_lon = lat, lon
-            current_event.event_time = datetime.datetime(year=yr_, month=mn_,
-                                                         day=dy_, hour=hr_,
-                                                         minute=me_)
-            current_event.event_time = TZOBJ.localize(current_event.event_time)
-            current_event.event_end_time = (current_event.event_time +
-                                            datetime.timedelta(minutes=60))
-            yield current_event
-            current_event = NycRunsEvent()
-            event_buffer = []
+    for li in soup.find_all('li'):
+        if 'event' in li.attrs.get('class', []) \
+                and 'event-training' not in li.attrs.get('class', []):
+            yield parse_event_tag(li)
 
 
 if __name__ == "__main__":

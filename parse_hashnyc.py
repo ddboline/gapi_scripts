@@ -5,10 +5,13 @@ from __future__ import (absolute_import, division, print_function,
 import datetime
 import requests
 from bs4 import BeautifulSoup
-from util import openurl
 from dateutil.parser import parse
-from parse_events import (BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,
-                          strip_out_unicode_crap)
+from parse_events import BaseEvent, parse_events, TZOBJ, strip_out_unicode_crap
+try:
+    requests.packages.urllib3.disable_warnings()
+except AttributeError:
+    pass
+
 CALID = '8hfjg0d8ls2od3s9bd1k1v9jtc@group.calendar.google.com'
 
 
@@ -51,12 +54,11 @@ class HashNYCEvents(BaseEvent):
 def parse_hashnyc(url='http://hashnyc.com/?days=all'):
     """ parsing function """
     current_event = None
-    event_buffer = []
 
     resp = requests.get(url)
-    
+
     soup = BeautifulSoup(resp.text, 'html.parser')
-    
+
     for table in soup.find_all('table'):
         if 'future_hashes' in table.attrs['class']:
             for td in table.find_all('td'):
@@ -64,24 +66,29 @@ def parse_hashnyc(url='http://hashnyc.com/?days=all'):
                     clean_text = '%s' % td
                     clean_text = clean_text.replace('<br>', ' ')
                     current_event = HashNYCEvents()
-                    current_event.event_time = parse(BeautifulSoup(clean_text, 'html.parser').text)
-                    current_event.event_time = TZOBJ.localize(current_event.event_time)
-                    current_event.event_end_time = (current_event.event_time +
-                                                    datetime.timedelta(minutes=60))
+                    current_event.event_time = parse(
+                        BeautifulSoup(clean_text, 'html.parser').text)
+                    current_event.event_time = TZOBJ.localize(
+                        current_event.event_time)
+                    current_event.event_end_time = (
+                        current_event.event_time
+                        + datetime.timedelta(minutes=60))
                 else:
                     for b in td.find_all('b'):
                         current_event.event_name = b.text
                     clean_text = '%s' % td
-                    clean_text = clean_text.replace('<br>', '\n').replace('<td>', '\n')
+                    clean_text = clean_text.replace('<br>',
+                                                    '\n').replace('<td>', '\n')
                     clean_text = BeautifulSoup(clean_text, 'html.parser').text
                     for line in clean_text.split('\n'):
                         if not current_event.event_name:
                             current_event.event_name = line
                         if 'Start:' in line:
-                            current_event.event_location = line.replace('Start:', '').replace('.', ',').strip()
+                            current_event.event_location = \
+                                line.replace('Start:', '').replace('.',
+                                                                   ',').strip()
                             current_event.event_location += ' New York, NY'
                     current_event.event_desc = clean_text
-                    #current_event.print_event()
                     if 'Hares Needed' not in current_event.event_name:
                         yield current_event
 

@@ -167,7 +167,7 @@ class BaseEvent(object):
         if not self.event_id:
             self.generate_id()
         ostr.append('\t event_id: %s' % self.event_id)
-        print('\n'.join(ostr))
+        print('\n'.join(x.encode(errors='ignore') for x in ostr))
 
 
 def parse_events(parser_callback=None, script_name='', calid=None,
@@ -187,7 +187,10 @@ def parse_events(parser_callback=None, script_name='', calid=None,
         """ Simple Responce fn """
         for item in response['items']:
             for key, it_ in item.items():
-                print('%s: %s' % (key, it_))
+                try:
+                    print('%s: %s' % (key, it_))
+                except UnicodeEncodeError:
+                    print('%s: %s' % (key.encode(errors='ignore'), it_.encode(errors='ignore')))
             print('')
         return outlist
 

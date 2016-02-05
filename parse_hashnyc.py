@@ -18,6 +18,7 @@ CALID = '8hfjg0d8ls2od3s9bd1k1v9jtc@group.calendar.google.com'
 class HashNYCEvents(BaseEvent):
     """ NYC Hash Event Class """
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
+        ev_url = 'http://hashnyc.com/?days=all'
         BaseEvent.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url,
                            ev_desc=ev_desc, ev_loc=ev_loc)
 

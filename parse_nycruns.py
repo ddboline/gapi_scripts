@@ -78,7 +78,10 @@ def parse_event_tag(li_tag):
             clean_text = '%s' % div
             clean_text = clean_text.replace('>', '>\n')
             clean_text = BeautifulSoup(clean_text, 'html.parser').text
-            clean_text = clean_text.split('Start time:')[1].strip()
+            clean_text = clean_text.split('Start time:')
+            if len(clean_text) < 2:
+                continue
+            clean_text = clean_text[1].strip()
             clean_text = clean_text.lower()
             clean_text = clean_text.replace('am', ' am').replace('pm', ' pm')
             ent = clean_text.split('\n')[0].split()

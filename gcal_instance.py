@@ -8,6 +8,29 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+
+def t_execute(request):
+    timeout = 1
+    while True:
+        try:
+            return request.execute()
+        except HttpError as exc:
+            if 'user rate limit exceeded' in exc.content.lower():
+                if timeout > 1:
+                    print('timeout %s' % timeout)
+                time.sleep(timeout)
+                timeout *= 2
+                if timeout >= 64:
+                    raise
+            elif 'sufficient permissions' in exc.content.lower():
+                raise
+            else:
+                print(dir(exc))
+                print('content', exc.content)
+                print('response', exc.resp)
+                raise
+
+
 class gcal_instance(object):
     ''' class to make use of google python api '''
     def __init__(self, app='calendar', version='v3'):
@@ -35,13 +58,13 @@ class gcal_instance(object):
         request = self.service.events()\
                               .insert(calendarId=calid,
                                       body=ev_entry.define_new_event_object())
-        response = request.execute()
+        response = t_execute(request)
         return response
 
     def delete_from_gcal(self, calid, evid):
         ''' delete event from calendar '''
         request = self.service.events().delete(calendarId=calid, eventId=evid)
-        response = request.execute()
+        response = t_execute(request)
         return response
 
     def get_gcal_events(self, calid='', callback_fn=None,
@@ -67,10 +90,10 @@ class gcal_instance(object):
                                                  singleEvents=True,
                                                  timeMin=mintime,
                                                  timeMax=maxtime)
-            response = request.execute()
+            response = t_execute(request)
         else:
             request = self.service.events().list(calendarId=calid)
-            response = request.execute()
+            response = t_execute(request)
 
 
         new_request = True
@@ -81,7 +104,7 @@ class gcal_instance(object):
             if not new_request:
                 break
             request = new_request
-            response = request.execute()
+            response = t_execute(request)
         return list_of_gcal_events
 
     def get_gcal_instances(self, calid='', evtid='', callback_fn=None):
@@ -100,7 +123,7 @@ class gcal_instance(object):
                                                   eventId=evtid,
                                                   timeMin=mintime,
                                                   timeMax=maxtime)
-        response = request.execute()
+        response = t_execute(request)
 
         new_request = True
         while new_request:
@@ -110,13 +133,13 @@ class gcal_instance(object):
             if not new_request:
                 break
             request = new_request
-            response = request.execute()
+            response = t_execute(request)
         return list_of_gcal_instances
 
     def list_gcal_calendars(self):
         ''' list calendars '''
         request = self.service.calendarList().list()
-        response = request.execute()
+        response = t_execute(request)
 
         for ent in response['items']:
             print('%s: %s' % (ent['summary'], ent['id']))

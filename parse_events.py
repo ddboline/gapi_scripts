@@ -7,6 +7,7 @@ import re
 import gzip
 import datetime
 import pytz
+from collections import defaultdict
 
 from util import datetimestring, datetimefromstring
 from gcal_instance import gcal_instance
@@ -171,7 +172,7 @@ class BaseEvent(object):
 
 
 def parse_events(parser_callback=None, script_name='', calid=None,
-                 callback_class=None):
+                 callback_class=None, replace=False):
     """ Parse GCalendar Events """
 
     def process_response(response, outlist):
@@ -230,15 +231,15 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             if line.event_time >= datetime.datetime.now(TZOBJ):
                 line.print_event()
     if command_ == 'new':
-        new_events = []
-        new_events_dict = {}
-        existing_events = {}
+        new_events = {}
+        existing_events = defaultdict(list)
+        remove_dict = {}
         exist = gcal_instance().get_gcal_events(calid=arg_,
                                                 callback_fn=process_response)
         for ev_ in exist.values():
             ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'),
                                 ev_.event_name)
-            existing_events[ev_key] = True
+            existing_events[ev_key].append(ev_)
         for line in parser_callback():
             if not line:
                 continue
@@ -247,20 +248,32 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             ev_key = '%s_%s' % (line.event_time.strftime('%Y-%m-%d'),
                                 line.event_name)
             if ev_key not in existing_events:
-                if ev_key not in new_events_dict:
+                if ev_key not in new_events:
                     line.print_event()
-                    new_events.append(line)
-                    new_events_dict[ev_key] = line
+                    new_events[ev_key] = line
+            elif replace:
+                if ev_key not in new_events:
+                    line.print_event()
+                    new_events[ev_key] = line
+                    remove_dict[ev_key] = existing_events[ev_key]
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(new_events, pkl_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(new_events.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
+        if remove_dict:
+            with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'wb') as pkl_file:
+                pickle.dump(remove_dict.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
     if command_ == 'post':
         new_events = []
+        remove_events = defaultdict(list)
         gci = gcal_instance()
         if os.path.exists('.tmp_%s.pkl.gz' % script_name):
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'rb') as pkl_file:
                 new_events = pickle.load(pkl_file)
             os.remove('.tmp_%s.pkl.gz' % script_name)
+            if os.path.exists('.tmp_rm_%s.pkl.gz' % script_name):
+                with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'rb') as pkl_file:
+                    remove_events = pickle.load(pkl_file)
+                os.remove('.tmp_rm_%s.pkl.gz' % script_name)
         else:
             print('no pickle file')
             exist = gci.get_gcal_events(calid=arg_,
@@ -273,6 +286,9 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                     new_events.append(line)
         for ev_ in new_events:
             gci.add_to_gcal(ev_entry=ev_, calid=arg_)
+        for ev_list in remove_events:
+            for ev_ in ev_list:
+                gci.delete_from_gcal(calid=arg_, evid=ev_.event_id)
     if command_ == 'dupe':
         keep_dict = {}
         remove_dict = {}
@@ -290,6 +306,7 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 remove_dict[ev_key] = ev_
         print('number %d %d' % (len(keep_dict), len(remove_dict)))
         for k in remove_dict:
+            print(ev.event_id)
             ev_ = remove_dict[k]
             gci.delete_from_gcal(calid=arg_, evid=ev_.event_id)
     if command_ == 'cal':

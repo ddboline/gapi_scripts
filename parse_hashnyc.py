@@ -96,4 +96,4 @@ def parse_hashnyc(url='http://hashnyc.com/?days=all'):
 
 if __name__ == "__main__":
     parse_events(parser_callback=parse_hashnyc, script_name='parse_hashnyc',
-                 callback_class=HashNYCEvents, calid=CALID)
+                 callback_class=HashNYCEvents, calid=CALID, replace=True)

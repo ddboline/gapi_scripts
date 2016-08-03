@@ -138,7 +138,7 @@ class BaseEvent(object):
         else:
             print(obj)
             exit(0)
-        self.event_name = obj['summary']
+        self.event_name = obj.get('summary', '')
         if 'description' in obj:
             for ent in obj['description'].split('\n'):
                 if 'http' in ent:
@@ -191,7 +191,8 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 try:
                     print('%s: %s' % (key, it_))
                 except UnicodeEncodeError:
-                    print('%s: %s' % (key.encode(errors='ignore'), it_.encode(errors='ignore')))
+                    print('%s: %s' % (key.encode(errors='ignore'),
+                                      it_.encode(errors='ignore')))
             print('')
         return outlist
 
@@ -258,10 +259,13 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                     remove_dict[ev_key] = existing_events[ev_key]
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(new_events.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(new_events.values(), pkl_file,
+                            pickle.HIGHEST_PROTOCOL)
         if remove_dict:
-            with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(remove_dict.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
+            with gzip.open('.tmp_rm_%s.pkl.gz' % script_name,
+                           'wb') as pkl_file:
+                pickle.dump(remove_dict.values(), pkl_file,
+                            pickle.HIGHEST_PROTOCOL)
     if command_ == 'post':
         new_events = []
         remove_events = defaultdict(list)
@@ -271,7 +275,8 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 new_events = pickle.load(pkl_file)
             os.remove('.tmp_%s.pkl.gz' % script_name)
             if os.path.exists('.tmp_rm_%s.pkl.gz' % script_name):
-                with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'rb') as pkl_file:
+                with gzip.open('.tmp_rm_%s.pkl.gz' % script_name,
+                               'rb') as pkl_file:
                     remove_events = pickle.load(pkl_file)
                 os.remove('.tmp_rm_%s.pkl.gz' % script_name)
         else:
@@ -306,8 +311,8 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 remove_dict[ev_key] = ev_
         print('number %d %d' % (len(keep_dict), len(remove_dict)))
         for k in remove_dict:
-            print(ev.event_id)
             ev_ = remove_dict[k]
+            print(ev_.event_id)
             gci.delete_from_gcal(calid=arg_, evid=ev_.event_id)
     if command_ == 'cal':
         gcal_instance().get_gcal_events(calid=arg_,

@@ -62,14 +62,14 @@ def parse_event_tag(li_tag):
                 mn_ = MONTHS_SHORT.index(ent)+1
         elif 'event-day' in div.attrs.get('class', []):
             dy_ = int(div.text)
+        elif 'event-name' in div.attrs.get('class', []):
+            current_event.event_name = div.text
+        elif 'event-location' in div.attrs.get('class', []):
+            current_event.event_location = div.text
 
     for a in li_tag.find_all('a'):
         if 'event-link' in a.attrs.get('class', []):
             current_event.event_url = a.attrs.get('href')
-        elif 'event-name' in a.attrs.get('class', []):
-            current_event.event_name = a.text
-        elif 'event-location' in a.attrs.get('class', []):
-            current_event.event_location = a.text
 
     resp = requests.get(current_event.event_url)
     soup = BeautifulSoup(resp.text, 'html.parser')
@@ -105,7 +105,6 @@ def parse_event_tag(li_tag):
     current_event.event_time = TZOBJ.localize(current_event.event_time)
     current_event.event_end_time = (current_event.event_time +
                                     datetime.timedelta(minutes=60))
-
     return current_event
 
 

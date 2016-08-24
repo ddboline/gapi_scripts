@@ -71,7 +71,10 @@ def parse_event_tag(li_tag):
         if 'event-link' in a.attrs.get('class', []):
             current_event.event_url = a.attrs.get('href')
 
-    resp = requests.get(current_event.event_url)
+    url = current_event.event_url
+    if 'nycruns.com' not in url:
+        url = '%s%s' % ('https://nycruns.com', url)
+    resp = requests.get(url)
     soup = BeautifulSoup(resp.text, 'html.parser')
     for div in soup.find_all('div'):
         if 'race-display-date' in div.attrs.get('class', []):
@@ -97,8 +100,11 @@ def parse_event_tag(li_tag):
         if 'initialize' in script.text:
             clean_text = script.text.replace("'", "")
             clean_text = clean_text.replace('initialize(', '').replace(')', '')
-            lat, lon = [float(x) for x in clean_text.split(',')[:2]]
-            current_event.event_lat, current_event.event_lon = lat, lon
+            try:
+                lat, lon = [float(x) for x in clean_text.split(',')[:2]]
+                current_event.event_lat, current_event.event_lon = lat, lon
+            except ValueError:
+                pass
 
     current_event.event_time = datetime.datetime(year=yr_, month=mn_, day=dy_,
                                                  hour=hr_, minute=me_)

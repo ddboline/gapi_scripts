@@ -168,7 +168,7 @@ class BaseEvent(object):
         if not self.event_id:
             self.generate_id()
         ostr.append('\t event_id: %s' % self.event_id)
-        print('\n'.join(x.decode(errors='ignore') for x in ostr))
+        print('\n'.join(x for x in ostr))
 
 
 def parse_events(parser_callback=None, script_name='', calid=None,

@@ -70,6 +70,9 @@ def parse_event_tag(li_tag):
     for a in li_tag.find_all('a'):
         if 'event-link' in a.attrs.get('class', []):
             current_event.event_url = a.attrs.get('href')
+            if 'nycruns.com' not in current_event.event_url:
+                current_event.event_url = 'https://nycruns.com%s' \
+                                          % current_event.event_url
 
     url = current_event.event_url
     if 'nycruns.com' not in url:

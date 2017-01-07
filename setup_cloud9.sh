@@ -11,7 +11,7 @@ sudo bash -c "echo deb ssh://${USERNAME}@${HOST}/var/www/html/deb/xenial/devel .
 
 sudo apt-get update
 sudo apt-get install -y --force-yes python-googleapi python-tz python-dateutil \
-                                    python-requests python-nose python-coverage \
+                                    python-requests python-pytest python-pytest-cov \
                                     python-setuptools python-dev python-bs4
 
 scp ${USERNAME}@${HOST}:~/setup_files/build/ddboline_personal_scripts/client_secrets.json .

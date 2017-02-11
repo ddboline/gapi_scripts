@@ -1,7 +1,6 @@
 #!/usr/bin/python
 """ Parse HashNYC Webpage Calendar """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -17,15 +16,15 @@ CALID = '8hfjg0d8ls2od3s9bd1k1v9jtc@group.calendar.google.com'
 
 class HashNYCEvents(BaseEvent):
     """ NYC Hash Event Class """
+
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
         ev_url = 'http://hashnyc.com/?days=all'
-        BaseEvent.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url,
-                           ev_desc=ev_desc, ev_loc=ev_loc)
+        BaseEvent.__init__(
+            self, dt=dt, ev_name=ev_name, ev_url=ev_url, ev_desc=ev_desc, ev_loc=ev_loc)
 
     def compare(self, obj, partial_match=None):
         comp_list = []
-        attr_list = ('event_time', 'event_end_time', 'event_url',
-                     'event_location', 'event_name')
+        attr_list = ('event_time', 'event_end_time', 'event_url', 'event_location', 'event_name')
         out_list = []
         for attr in attr_list:
             c0_ = getattr(self, attr)
@@ -67,19 +66,15 @@ def parse_hashnyc(url='http://hashnyc.com/?days=all'):
                     clean_text = '%s' % td
                     clean_text = clean_text.replace('<br>', ' ')
                     current_event = HashNYCEvents()
-                    current_event.event_time = parse(
-                        BeautifulSoup(clean_text, 'html.parser').text)
-                    current_event.event_time = TZOBJ.localize(
-                        current_event.event_time)
+                    current_event.event_time = parse(BeautifulSoup(clean_text, 'html.parser').text)
+                    current_event.event_time = TZOBJ.localize(current_event.event_time)
                     current_event.event_end_time = (
-                        current_event.event_time
-                        + datetime.timedelta(minutes=60))
+                        current_event.event_time + datetime.timedelta(minutes=60))
                 else:
                     for b in td.find_all('b'):
                         current_event.event_name = b.text
                     clean_text = '%s' % td
-                    clean_text = clean_text.replace('<br>',
-                                                    '\n').replace('<td>', '\n')
+                    clean_text = clean_text.replace('<br>', '\n').replace('<td>', '\n')
                     clean_text = BeautifulSoup(clean_text, 'html.parser').text
                     for line in clean_text.split('\n'):
                         if not current_event.event_name:
@@ -95,5 +90,9 @@ def parse_hashnyc(url='http://hashnyc.com/?days=all'):
 
 
 if __name__ == "__main__":
-    parse_events(parser_callback=parse_hashnyc, script_name='parse_hashnyc',
-                 callback_class=HashNYCEvents, calid=CALID, replace=True)
+    parse_events(
+        parser_callback=parse_hashnyc,
+        script_name='parse_hashnyc',
+        callback_class=HashNYCEvents,
+        calid=CALID,
+        replace=True)

@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Utility functions """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 import os
 from subprocess import call, Popen, PIPE
 
@@ -85,8 +84,7 @@ def test_cleanup_path():
 
 def test_datetimestring():
     import datetime
-    dt = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12,
-                           second=13)
+    dt = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13)
     assert datetimestring(dt) == '1980-11-17T05:12:13Z'
 
 
@@ -94,8 +92,7 @@ def test_datetimefromstring():
     import datetime
     from pytz import UTC
     dt0 = '1980-11-17T05:12:13Z'
-    dt1 = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12,
-                            second=13, tzinfo=UTC)
+    dt1 = datetime.datetime(year=1980, month=11, day=17, hour=5, minute=12, second=13, tzinfo=UTC)
     assert datetimefromstring(dt0) == dt1
 
 

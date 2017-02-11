@@ -23,6 +23,7 @@ from util import datetimefromstring
 
 class PhysicsEvent(BaseEvent):
     """ Physics Event Class """
+
     def __init__(self, dt=None, room='', title='', speaker='', talk_type=''):
         BaseEvent.__init__(self, dt=dt)
         self.room = room
@@ -53,22 +54,30 @@ class PhysicsEvent(BaseEvent):
 
     def define_new_event_object(self):
         """ Define new event object """
-        return {'creator':
-                    {'self': True, 'displayName': 'Daniel Boline',
-                     'email': 'ddboline@gmail.com'},
-                'originalStartTime':
-                    {'dateTime': datetimestring(self.event_time)},
-                'organizer':
-                    {'self': True, 'displayName': 'Daniel Boline',
-                     'email': 'ddboline@gmail.com'},
-                'location': self.room,
-                'summary': self.talk_type,
-                'description': '\"%s\"\n%s\n' % (self.title, self.speaker),
-                'start':
-                    {'dateTime': datetimestring(self.event_time)},
-                'end':
-                    {'dateTime': datetimestring(self.event_time +
-                                                datetime.timedelta(hours=1))},}
+        return {
+            'creator': {
+                'self': True,
+                'displayName': 'Daniel Boline',
+                'email': 'ddboline@gmail.com'
+            },
+            'originalStartTime': {
+                'dateTime': datetimestring(self.event_time)
+            },
+            'organizer': {
+                'self': True,
+                'displayName': 'Daniel Boline',
+                'email': 'ddboline@gmail.com'
+            },
+            'location': self.room,
+            'summary': self.talk_type,
+            'description': '\"%s\"\n%s\n' % (self.title, self.speaker),
+            'start': {
+                'dateTime': datetimestring(self.event_time)
+            },
+            'end': {
+                'dateTime': datetimestring(self.event_time + datetime.timedelta(hours=1))
+            },
+        }
 
     def read_gcal_event(self, obj):
         """ Read Gcalendar event """
@@ -89,16 +98,16 @@ class PhysicsEvent(BaseEvent):
         """ Print event """
         if not self.event_id:
             self.generate_id()
-        ostr = [datetimestring(self.event_time),
-                      '\t room: %s' % self.room,
-                      '\t type: %s' % self.talk_type,
-                      '\t speaker: %s' % self.speaker,
-                      '\t title: %s' % self.title,
-                      '\t event_id: %s' % self.event_id]
+        ostr = [
+            datetimestring(self.event_time), '\t room: %s' % self.room,
+            '\t type: %s' % self.talk_type, '\t speaker: %s' % self.speaker,
+            '\t title: %s' % self.title, '\t event_id: %s' % self.event_id
+        ]
         try:
             print('\n'.join(ostr))
         except UnicodeEncodeError:
             print('\n'.join(x.encode(errors='ignore') for x in ostr))
+
 
 def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
     ''' parse physics web page to get the week's events '''
@@ -165,9 +174,9 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
             if ents[0].replace(',', '').strip() in WEEKDAYS:
                 try:
                     dt_ = datetime.datetime(
-                            year=datetime.datetime.now(TZOBJ).year,
-                            month=MONTHS_SHORT.index(ents[1])+1,
-                            day=int(ents[2]))
+                        year=datetime.datetime.now(TZOBJ).year,
+                        month=MONTHS_SHORT.index(ents[1]) + 1,
+                        day=int(ents[2]))
                 except ValueError:
                     dt_ = datetime.datetime.now()
                 if current_event:
@@ -184,9 +193,13 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
                 if ents[2] == 'p.m.' and hr_ != 12:
                     hr_ += 12
                 try:
-                    dtobj = datetime.datetime(year=dt_.year, month=dt_.month,
-                                              day=dt_.day, hour=hr_,
-                                              minute=mn_, tzinfo=TZOBJ)
+                    dtobj = datetime.datetime(
+                        year=dt_.year,
+                        month=dt_.month,
+                        day=dt_.day,
+                        hour=hr_,
+                        minute=mn_,
+                        tzinfo=TZOBJ)
                 except Exception as exc:
                     print('Exception', exc, dt_, hr_, mn_, ents)
                 current_event.event_time = dtobj - TZOBJ.dst(dt_)
@@ -196,20 +209,16 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
                 last_filled = 'Room'
             elif ' '.join(ents[0:2]).replace(',', '') in BUILDINGS and \
                     last_filled == 'Room':
-                current_event.room = '%s %s' % (current_event.room,
-                                                ' '.join(ents))
+                current_event.room = '%s %s' % (current_event.room, ' '.join(ents))
             elif current_event.talk_type == '':
                 current_event.talk_type = ' '.join(ents)
                 last_filled = 'Type'
             elif ents[0].find('"') >= 0 or ents[0].find('\xe2') >= 0:
                 if len(current_event.title) == 0:
-                    current_event.title = ' '.join(ents).replace('"', '')\
-                                                        .replace('\xe2', '')
+                    current_event.title = ' '.join(ents).replace('"', '').replace('\xe2', '')
                 else:
-                    current_event.title = ' '.join([current_event.title,
-                                                    ' '.join(ents)\
-                                                       .replace('"', '')\
-                                                       .replace('\xe2', '')])
+                    current_event.title = ' '.join(
+                        [current_event.title, ' '.join(ents).replace('"', '').replace('\xe2', '')])
                 last_filled = 'Title'
             elif ents[0] == 'TBA':
                 current_event.title = ents[0]
@@ -237,6 +246,8 @@ def parse_physics(url='http://physics.sunysb.edu/Physics/', is_main_page=True):
 
 
 if __name__ == "__main__":
-    parse_events(parser_callback=parse_physics, script_name='parse_physics',
-                 calid='1enjsutpgucsid46mde8ffdtf4@group.calendar.google.com',
-                 callback_class=PhysicsEvent)
+    parse_events(
+        parser_callback=parse_physics,
+        script_name='parse_physics',
+        calid='1enjsutpgucsid46mde8ffdtf4@group.calendar.google.com',
+        callback_class=PhysicsEvent)

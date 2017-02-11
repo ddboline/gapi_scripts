@@ -1,7 +1,6 @@
 #!/usr/bin/python
 """ Base module for Parsing events """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 import os
 import re
 import gzip
@@ -17,12 +16,12 @@ try:
 except ImportError:
     import pickle
 
-MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-                'Oct', 'Nov', 'Dec']
-MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-               'August', 'September', 'October', 'November', 'December']
-WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
-            'Sunday']
+MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+MONTHS_LONG = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+    'October', 'November', 'December'
+]
+WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 BUILDINGS = ['Math Tower', 'Harriman Hall', 'Grad. Physics', 'ESS']
 
 TZOBJ = pytz.timezone("US/Eastern")
@@ -36,9 +35,10 @@ def strip_out_unicode_crap(inpstr):
 class BaseEvent(object):
     """ Base Event Class """
 
-    __slots__ = ['event_time', 'event_end_time', 'event_url', 'event_name',
-                 'event_desc', 'event_location', 'event_lat', 'event_lon',
-                 'event_id']
+    __slots__ = [
+        'event_time', 'event_end_time', 'event_url', 'event_name', 'event_desc', 'event_location',
+        'event_lat', 'event_lon', 'event_id'
+    ]
 
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
         """ Init Method """
@@ -57,8 +57,8 @@ class BaseEvent(object):
     def compare(self, obj, partial_match=None):
         """ Compre event objects """
         comp_list = []
-        attr_list = ('event_time', 'event_end_time', 'event_url', 'event_desc',
-                     'event_location', 'event_name')
+        attr_list = ('event_time', 'event_end_time', 'event_url', 'event_desc', 'event_location',
+                     'event_name')
         out_list = []
         for attr in attr_list:
             c0_ = getattr(self, attr)
@@ -104,21 +104,34 @@ class BaseEvent(object):
             loc_str = '%f,%f' % (self.event_lat, self.event_lon)
         else:
             loc_str = self.event_location
-        return {'creator':
-                {'self': True, 'displayName': 'Daniel Boline',
-                 'email': 'ddboline@gmail.com'},
-                'originalStartTime':
-                {'dateTime': datetimestring(self.event_time)},
-                'organizer':
-                {'self': True, 'displayName': 'Daniel Boline',
-                 'email': 'ddboline@gmail.com'},
-                'location': loc_str,
-                'summary': self.event_name,
-                'description': 'Location: %s\nDescription: %s\n%s'
-                % (self.event_location, self.event_desc, self.event_url),
-                'start':
-                {'dateTime': datetimestring(self.event_time)},
-                'end': {'dateTime': datetimestring(self.event_end_time)}}
+        return {
+            'creator': {
+                'self': True,
+                'displayName': 'Daniel Boline',
+                'email': 'ddboline@gmail.com'
+            },
+            'originalStartTime': {
+                'dateTime': datetimestring(self.event_time)
+            },
+            'organizer': {
+                'self': True,
+                'displayName': 'Daniel Boline',
+                'email': 'ddboline@gmail.com'
+            },
+            'location':
+            loc_str,
+            'summary':
+            self.event_name,
+            'description':
+            'Location: %s\nDescription: %s\n%s' %
+            (self.event_location, self.event_desc, self.event_url),
+            'start': {
+                'dateTime': datetimestring(self.event_time)
+            },
+            'end': {
+                'dateTime': datetimestring(self.event_end_time)
+            }
+        }
 
     def read_gcal_event(self, obj):
         """ Read GCalendar Event """
@@ -130,11 +143,10 @@ class BaseEvent(object):
         elif 'date' in obj['start']:
             tstr = obj['start']['date']
             ts_ = [int(x) for x in (tstr[0:4], tstr[5:7], tstr[8:10])]
-            self.event_time = datetime.datetime(year=ts_[0], month=ts_[1],
-                                                day=ts_[2], hour=9, minute=0)
+            self.event_time = datetime.datetime(
+                year=ts_[0], month=ts_[1], day=ts_[2], hour=9, minute=0)
             self.event_time = TZOBJ.localize(self.event_time)
-            self.event_end_time = (self.event_time
-                                   + datetime.timedelta(minutes=60))
+            self.event_end_time = (self.event_time + datetime.timedelta(minutes=60))
         else:
             print(obj)
             exit(0)
@@ -149,20 +161,18 @@ class BaseEvent(object):
                     self.event_desc = ' '.join(ent.split()[1:])
         if 'location' in obj:
             try:
-                self.event_lat, self.event_lon = [
-                    float(x) for x in obj['location'].split(',')[:2]]
+                self.event_lat, self.event_lon = [float(x) for x in obj['location'].split(',')[:2]]
             except ValueError:
                 pass
         self.event_id = obj['id']
 
     def print_event(self):
         """ Print Event """
-        ostr = ['%s %s' % (datetimestring(self.event_time),
-                           datetimestring(self.event_end_time)),
-                '\t url: %s' % self.event_url,
-                '\t name: %s' % strip_out_unicode_crap(self.event_name),
-                '\t description: %s' % self.event_desc,
-                '\t location: %s' % self.event_location]
+        ostr = [
+            '%s %s' % (datetimestring(self.event_time), datetimestring(self.event_end_time)),
+            '\t url: %s' % self.event_url, '\t name: %s' % strip_out_unicode_crap(self.event_name),
+            '\t description: %s' % self.event_desc, '\t location: %s' % self.event_location
+        ]
         if type(self.event_lat) == float and type(self.event_lon) == float:
             ostr[-1] += ' %f,%f' % (self.event_lat, self.event_lon)
         if not self.event_id:
@@ -171,8 +181,11 @@ class BaseEvent(object):
         print('\n'.join(x for x in ostr))
 
 
-def parse_events(parser_callback=None, script_name='', calid=None,
-                 callback_class=None, replace=False):
+def parse_events(parser_callback=None,
+                 script_name='',
+                 calid=None,
+                 callback_class=None,
+                 replace=False):
     """ Parse GCalendar Events """
 
     def process_response(response, outlist):
@@ -191,8 +204,7 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 try:
                     print('%s: %s' % (key, it_))
                 except UnicodeEncodeError:
-                    print('%s: %s' % (key.encode(errors='ignore'),
-                                      it_.encode(errors='ignore')))
+                    print('%s: %s' % (key.encode(errors='ignore'), it_.encode(errors='ignore')))
             print('')
         return outlist
 
@@ -203,8 +215,8 @@ def parse_events(parser_callback=None, script_name='', calid=None,
 
     if not calid:
         calid = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
-    commands = ('h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm',
-                'search', 'week', 'dupe')
+    commands = ('h', 'list', 'new', 'post', 'cal', 'pcal', 'listcal', 'rm', 'search', 'week',
+                'dupe')
 
     command_ = ''
     arg_ = calid
@@ -235,19 +247,16 @@ def parse_events(parser_callback=None, script_name='', calid=None,
         new_events = {}
         existing_events = defaultdict(list)
         remove_dict = {}
-        exist = gcal_instance().get_gcal_events(calid=arg_,
-                                                callback_fn=process_response)
+        exist = gcal_instance().get_gcal_events(calid=arg_, callback_fn=process_response)
         for ev_ in exist.values():
-            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'),
-                                ev_.event_name)
+            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'), ev_.event_name)
             existing_events[ev_key].append(ev_)
         for line in parser_callback():
             if not line:
                 continue
             if args_ and line.generate_id() not in args_:
                 continue
-            ev_key = '%s_%s' % (line.event_time.strftime('%Y-%m-%d'),
-                                line.event_name)
+            ev_key = '%s_%s' % (line.event_time.strftime('%Y-%m-%d'), line.event_name)
             if ev_key not in existing_events:
                 if ev_key not in new_events:
                     line.print_event()
@@ -259,13 +268,10 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                     remove_dict[ev_key] = existing_events[ev_key]
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(new_events.values(), pkl_file,
-                            pickle.HIGHEST_PROTOCOL)
+                pickle.dump(new_events.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
         if remove_dict:
-            with gzip.open('.tmp_rm_%s.pkl.gz' % script_name,
-                           'wb') as pkl_file:
-                pickle.dump(remove_dict.values(), pkl_file,
-                            pickle.HIGHEST_PROTOCOL)
+            with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'wb') as pkl_file:
+                pickle.dump(remove_dict.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
     if command_ == 'post':
         new_events = []
         remove_events = defaultdict(list)
@@ -275,14 +281,12 @@ def parse_events(parser_callback=None, script_name='', calid=None,
                 new_events = pickle.load(pkl_file)
             os.remove('.tmp_%s.pkl.gz' % script_name)
             if os.path.exists('.tmp_rm_%s.pkl.gz' % script_name):
-                with gzip.open('.tmp_rm_%s.pkl.gz' % script_name,
-                               'rb') as pkl_file:
+                with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'rb') as pkl_file:
                     remove_events = pickle.load(pkl_file)
                 os.remove('.tmp_rm_%s.pkl.gz' % script_name)
         else:
             print('no pickle file')
-            exist = gci.get_gcal_events(calid=arg_,
-                                        callback_fn=process_response)
+            exist = gci.get_gcal_events(calid=arg_, callback_fn=process_response)
             for line in parser_callback():
                 if args_ and line.generate_id() not in args_:
                     continue
@@ -301,8 +305,7 @@ def parse_events(parser_callback=None, script_name='', calid=None,
         exist = gci.get_gcal_events(calid=arg_, callback_fn=process_response)
         for k in sorted(exist.keys()):
             ev_ = exist[k]
-            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'),
-                                ev_.event_name)
+            ev_key = '%s_%s' % (ev_.event_time.strftime('%Y-%m-%d'), ev_.event_name)
             if ev_key not in keep_dict:
                 keep_dict[ev_key] = ev_
             else:
@@ -315,16 +318,14 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             print(ev_.event_id)
             gci.delete_from_gcal(calid=arg_, evid=ev_.event_id)
     if command_ == 'cal':
-        gcal_instance().get_gcal_events(calid=arg_,
-                                        callback_fn=simple_response)
+        gcal_instance().get_gcal_events(calid=arg_, callback_fn=simple_response)
     if command_ == 'week':
-        exist = gcal_instance().get_gcal_events(calid=arg_,
-                                                callback_fn=process_response)
+        exist = gcal_instance().get_gcal_events(calid=arg_, callback_fn=process_response)
         for k in sorted(exist.keys()):
             ev_ = exist[k]
             if ev_.event_time < datetime.datetime.now(TZOBJ) or \
-                    ev_.event_time > (datetime.datetime.now(TZOBJ)
-                                      + datetime.timedelta(days=7)):
+                    ev_.event_time > (datetime.datetime.now(TZOBJ) +
+                                      datetime.timedelta(days=7)):
                 continue
             ev_.print_event()
     if command_ == 'pcal':
@@ -345,15 +346,15 @@ def parse_events(parser_callback=None, script_name='', calid=None,
             gci.delete_from_gcal(calid=arg_, evid=arg)
     if command_ == 'search':
         current_event = callback_class()
-        if args_[0] not in [k.replace('event_', '').replace('event', '')
-                            for k in current_event.__dict__.keys()]:
+        if args_[0] not in [
+                k.replace('event_', '').replace('event', '') for k in current_event.__dict__.keys()
+        ]:
             print(args_)
             exit(0)
         if len(args_) < 2:
             print(args_)
             exit(0)
-        exist = gcal_instance().get_gcal_events(calid=arg_,
-                                                callback_fn=process_response)
+        exist = gcal_instance().get_gcal_events(calid=arg_, callback_fn=process_response)
 
         def search_event(ev_):
             """ Search withing event """
@@ -387,5 +388,5 @@ def parse_events(parser_callback=None, script_name='', calid=None,
 
 
 if __name__ == "__main__":
-    parse_events(parser_callback=lambda : [], script_name='parse_event',
-                 calid=None, callback_class=None)
+    parse_events(
+        parser_callback=lambda: [], script_name='parse_event', calid=None, callback_class=None)

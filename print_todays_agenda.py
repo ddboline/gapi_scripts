@@ -8,8 +8,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os, time
-import datetime, pytz, dateutil.parser
+import os
+import time
+import datetime
+import pytz
+import dateutil.parser
 import re
 
 TZOBJ = pytz.timezone("US/Eastern")
@@ -18,6 +21,7 @@ TAG_RE = re.compile(r'<[^>]+>')
 
 class CalendarEvent(object):
     """ Hold data from google calendar, functions to print them out """
+
     def __init__(self, dt=datetime.datetime.now(TZOBJ)):
         """ init function """
         self.event_time = dt
@@ -44,9 +48,8 @@ class CalendarEvent(object):
         if self.title:
             outstr.append('\t summary: %s' % self.title)
         if self.description:
-            outstr.append('\t description: %s' % self.description\
-                                                     .replace('\n', ' ')\
-                                                     .replace('  ', ' '))
+            outstr.append('\t description: %s' % self.description.replace('\n', ' ')
+                          .replace('  ', ' '))
         outstr.append('')
         return '\n'.join(outstr)
 
@@ -72,9 +75,8 @@ def print_todays_agenda():
         outstr = []
         from gcal_instance import gcal_instance
         gcal = gcal_instance()
-        exist = gcal.get_gcal_events(calid='ddboline@gmail.com',
-                                     callback_fn=process_response,
-                                     do_single_events=True)
+        exist = gcal.get_gcal_events(
+            calid='ddboline@gmail.com', callback_fn=process_response, do_single_events=True)
         for k in sorted(exist.keys()):
             ex_ = exist[k]
             if ex_.event_time > datetime.datetime.now(TZOBJ) + \
@@ -85,11 +87,11 @@ def print_todays_agenda():
         return ('\n'.join(outstr)).encode(errors='ignore')
 
     cachefile = '/tmp/.todays_agenda.tmp'
+
     def convert_time_date(st_):
         """ date conversion... """
         t0_ = time.gmtime(st_)
-        return datetime.date(year=t0_.tm_year, month=t0_.tm_mon,
-                             day=t0_.tm_mday)
+        return datetime.date(year=t0_.tm_year, month=t0_.tm_mon, day=t0_.tm_mday)
 
     if not os.path.exists(cachefile) or convert_time_date(time.time()) > \
             convert_time_date(os.stat(cachefile).st_mtime) or force_update:
@@ -101,6 +103,7 @@ def print_todays_agenda():
     with open(cachefile, 'r') as infile:
         outstr = infile.readlines()
     return ''.join(outstr)
+
 
 if __name__ == '__main__':
     print(print_todays_agenda())

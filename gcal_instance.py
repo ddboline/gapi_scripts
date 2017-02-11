@@ -8,6 +8,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
+import time
+try:
+    from util import datetimestring
+except ImportError:
+    from scripts.util import datetimestring
+import datetime
+
+from apiclient import sample_tools
+from apiclient.errors import HttpError
+
 
 def t_execute(request):
     timeout = 1
@@ -33,11 +44,9 @@ def t_execute(request):
 
 class gcal_instance(object):
     ''' class to make use of google python api '''
+
     def __init__(self, app='calendar', version='v3'):
         ''' init function '''
-        from apiclient import sample_tools
-        import os
-
         curdir = os.curdir
 
         if not os.path.isfile('%s.dat' % app):
@@ -45,8 +54,8 @@ class gcal_instance(object):
             os.chdir(os.getenv('HOME'))
 
         self.service, self.flags = \
-            sample_tools.init([], app, version, __doc__, __file__,\
-                scope='https://www.googleapis.com/auth/%s' % app)
+            sample_tools.init([], app, version, __doc__, __file__,
+                              scope='https://www.googleapis.com/auth/%s' % app)
 
         os.chdir(curdir)
 
@@ -67,8 +76,7 @@ class gcal_instance(object):
         response = t_execute(request)
         return response
 
-    def get_gcal_events(self, calid='', callback_fn=None,
-                        do_single_events=False):
+    def get_gcal_events(self, calid='', callback_fn=None, do_single_events=False):
         '''
             get events from calendar
             use callback_fn to handle output
@@ -76,25 +84,15 @@ class gcal_instance(object):
         list_of_gcal_events = {}
 
         if do_single_events:
-            try:
-                from util import datetimestring
-            except ImportError:
-                from scripts.util import datetimestring
-            import datetime
-            mintime = datetimestring(datetime.datetime.now() -
-                                     datetime.timedelta(days=1))
-            maxtime = datetimestring(datetime.datetime.now() +
-                                     datetime.timedelta(days=7))
+            mintime = datetimestring(datetime.datetime.now() - datetime.timedelta(days=1))
+            maxtime = datetimestring(datetime.datetime.now() + datetime.timedelta(days=7))
 
-            request = self.service.events().list(calendarId=calid,
-                                                 singleEvents=True,
-                                                 timeMin=mintime,
-                                                 timeMax=maxtime)
+            request = self.service.events().list(
+                calendarId=calid, singleEvents=True, timeMin=mintime, timeMax=maxtime)
             response = t_execute(request)
         else:
             request = self.service.events().list(calendarId=calid)
             response = t_execute(request)
-
 
         new_request = True
         while new_request:
@@ -111,18 +109,12 @@ class gcal_instance(object):
         '''
             get instances of a recurring event
         '''
-        from util import datetimestring
-        import datetime
-        mintime = datetimestring(datetime.datetime.now() -
-                                 datetime.timedelta(days=1))
-        maxtime = datetimestring(datetime.datetime.now() +
-                                 datetime.timedelta(days=7))
+        mintime = datetimestring(datetime.datetime.now() - datetime.timedelta(days=1))
+        maxtime = datetimestring(datetime.datetime.now() + datetime.timedelta(days=7))
 
         list_of_gcal_instances = {}
-        request = self.service.events().instances(calendarId=calid,
-                                                  eventId=evtid,
-                                                  timeMin=mintime,
-                                                  timeMax=maxtime)
+        request = self.service.events().instances(
+            calendarId=calid, eventId=evtid, timeMin=mintime, timeMax=maxtime)
         response = t_execute(request)
 
         new_request = True

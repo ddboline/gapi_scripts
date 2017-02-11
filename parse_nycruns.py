@@ -1,12 +1,10 @@
 #!/usr/bin/python
 """ Parse NYCRuns Webpage Calendar """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 import datetime
 import requests
 from bs4 import BeautifulSoup
-from parse_events import (BaseEvent, parse_events, MONTHS_SHORT, TZOBJ,
-                          strip_out_unicode_crap)
+from parse_events import (BaseEvent, parse_events, MONTHS_SHORT, TZOBJ, strip_out_unicode_crap)
 try:
     requests.packages.urllib3.disable_warnings()
 except AttributeError:
@@ -16,14 +14,14 @@ CALID = 'ufdpqtvophgg2qn643rducu1a4@group.calendar.google.com'
 
 class NycRunsEvent(BaseEvent):
     """ NYC Runs Event Class """
+
     def __init__(self, dt=None, ev_name='', ev_url='', ev_desc='', ev_loc=''):
-        BaseEvent.__init__(self, dt=dt, ev_name=ev_name, ev_url=ev_url,
-                           ev_desc=ev_desc, ev_loc=ev_loc)
+        BaseEvent.__init__(
+            self, dt=dt, ev_name=ev_name, ev_url=ev_url, ev_desc=ev_desc, ev_loc=ev_loc)
 
     def compare(self, obj, partial_match=None):
         comp_list = []
-        attr_list = ('event_time', 'event_end_time', 'event_url',
-                     'event_location', 'event_name')
+        attr_list = ('event_time', 'event_end_time', 'event_url', 'event_location', 'event_name')
         out_list = []
         for attr in attr_list:
             c0_ = getattr(self, attr)
@@ -59,7 +57,7 @@ def parse_event_tag(li_tag):
         elif 'event-month' in div.attrs.get('class', []):
             ent = div.text.strip()
             if ent in MONTHS_SHORT:
-                mn_ = MONTHS_SHORT.index(ent)+1
+                mn_ = MONTHS_SHORT.index(ent) + 1
         elif 'event-day' in div.attrs.get('class', []):
             dy_ = int(div.text)
         elif 'event-name' in div.attrs.get('class', []):
@@ -91,12 +89,12 @@ def parse_event_tag(li_tag):
             clean_text = clean_text.lower()
             clean_text = clean_text.replace('am', ' am').replace('pm', ' pm')
             ent = clean_text.split('\n')[0].split()
-            for num in range(len(ent)-1):
+            for num in range(len(ent) - 1):
                 try:
                     hr_, me_ = [int(x) for x in ent[num].split(':')[:2]]
                 except:
                     continue
-                if 'pm' in ent[num+1]:
+                if 'pm' in ent[num + 1]:
                     hr_ += 12
 
     for script in soup.find_all('script'):
@@ -109,11 +107,9 @@ def parse_event_tag(li_tag):
             except ValueError:
                 pass
 
-    current_event.event_time = datetime.datetime(year=yr_, month=mn_, day=dy_,
-                                                 hour=hr_, minute=me_)
+    current_event.event_time = datetime.datetime(year=yr_, month=mn_, day=dy_, hour=hr_, minute=me_)
     current_event.event_time = TZOBJ.localize(current_event.event_time)
-    current_event.event_end_time = (current_event.event_time +
-                                    datetime.timedelta(minutes=60))
+    current_event.event_end_time = (current_event.event_time + datetime.timedelta(minutes=60))
     return current_event
 
 
@@ -129,5 +125,8 @@ def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
 
 
 if __name__ == "__main__":
-    parse_events(parser_callback=parse_nycruns, script_name='parse_nycruns',
-                 callback_class=NycRunsEvent, calid=CALID)
+    parse_events(
+        parser_callback=parse_nycruns,
+        script_name='parse_nycruns',
+        callback_class=NycRunsEvent,
+        calid=CALID)

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """Example of using hangups to send a chat message to a conversation."""
 
 import asyncio

@@ -75,6 +75,7 @@ def parse_event_tag(li_tag):
     url = current_event.event_url
     if 'nycruns.com' not in url:
         url = '%s%s' % ('https://nycruns.com', url)
+    print(url)
     resp = requests.get(url)
     soup = BeautifulSoup(resp.text, 'html.parser')
     for div in soup.find_all('div'):
@@ -113,7 +114,7 @@ def parse_event_tag(li_tag):
     return current_event
 
 
-def parse_nycruns(url='http://nycruns.com/races/?show=registerable'):
+def parse_nycruns(url='https://nycruns.com/races/?show=registerable'):
     """ parsing function """
     resp = requests.get(url)
     soup = BeautifulSoup(resp.text, 'html.parser')

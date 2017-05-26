@@ -64,7 +64,7 @@ def parse_hashnyc(url='http://hashnyc.com/?days=all'):
             for td in table.find_all('td'):
                 if 'deeplink_container' in td.attrs.get('class', {}):
                     clean_text = '%s' % td
-                    clean_text = clean_text.replace('<br>', ' ')
+                    clean_text = clean_text.replace('<br>', ' ').replace('<br/>', ' ')
                     current_event = HashNYCEvents()
                     current_event.event_time = parse(BeautifulSoup(clean_text, 'html.parser').text)
                     current_event.event_time = TZOBJ.localize(current_event.event_time)

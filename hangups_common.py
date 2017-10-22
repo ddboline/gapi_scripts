@@ -38,19 +38,13 @@ def run_example(example_coroutine, *extra_args):
 
 def _get_parser(extra_args):
     """Return ArgumentParser with any extra arguments."""
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, )
     dirs = appdirs.AppDirs('hangups', 'hangups')
     default_token_path = os.path.join(dirs.user_cache_dir, 'refresh_token.txt')
     parser.add_argument(
-        '--token-path', default=default_token_path,
-        help='path used to store OAuth refresh token'
-    )
+        '--token-path', default=default_token_path, help='path used to store OAuth refresh token')
     parser.add_argument(
-        '-d', '--debug', action='store_true',
-        help='log detailed debugging messages'
-    )
+        '-d', '--debug', action='store_true', help='log detailed debugging messages')
     for extra_arg in extra_args:
         parser.add_argument(extra_arg, required=True)
     return parser
@@ -65,9 +59,7 @@ def _async_main(example_coroutine, client, args):
     # Wait for hangups to either finish connecting or raise an exception.
     on_connect = asyncio.Future()
     client.on_connect.add_observer(lambda: on_connect.set_result(None))
-    done, _ = yield from asyncio.wait(
-        (on_connect, task), return_when=asyncio.FIRST_COMPLETED
-    )
+    done, _ = yield from asyncio.wait((on_connect, task), return_when=asyncio.FIRST_COMPLETED)
     yield from asyncio.gather(*done)
 
     # Run the example coroutine. Afterwards, disconnect hangups gracefully and

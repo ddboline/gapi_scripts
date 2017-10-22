@@ -123,8 +123,8 @@ class BaseEvent(object):
             'summary':
             self.event_name,
             'description':
-            'Location: %s\nDescription: %s\n%s' %
-            (self.event_location, self.event_desc, self.event_url),
+            'Location: %s\nDescription: %s\n%s' % (self.event_location, self.event_desc,
+                                                   self.event_url),
             'start': {
                 'dateTime': datetimestring(self.event_time)
             },
@@ -170,8 +170,10 @@ class BaseEvent(object):
         """ Print Event """
         ostr = [
             '%s %s' % (datetimestring(self.event_time), datetimestring(self.event_end_time)),
-            '\t url: %s' % self.event_url, '\t name: %s' % strip_out_unicode_crap(self.event_name),
-            '\t description: %s' % self.event_desc, '\t location: %s' % self.event_location
+            '\t url: %s' % self.event_url,
+            '\t name: %s' % strip_out_unicode_crap(self.event_name),
+            '\t description: %s' % self.event_desc,
+            '\t location: %s' % self.event_location
         ]
         if type(self.event_lat) == float and type(self.event_lon) == float:
             ostr[-1] += ' %f,%f' % (self.event_lat, self.event_lon)

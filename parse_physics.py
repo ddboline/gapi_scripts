@@ -99,9 +99,12 @@ class PhysicsEvent(BaseEvent):
         if not self.event_id:
             self.generate_id()
         ostr = [
-            datetimestring(self.event_time), '\t room: %s' % self.room,
-            '\t type: %s' % self.talk_type, '\t speaker: %s' % self.speaker,
-            '\t title: %s' % self.title, '\t event_id: %s' % self.event_id
+            datetimestring(self.event_time),
+            '\t room: %s' % self.room,
+            '\t type: %s' % self.talk_type,
+            '\t speaker: %s' % self.speaker,
+            '\t title: %s' % self.title,
+            '\t event_id: %s' % self.event_id
         ]
         try:
             print('\n'.join(ostr))

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
     gcal_instance class, used by parse_glirc and parse_physics

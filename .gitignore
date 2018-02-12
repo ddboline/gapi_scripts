@@ -56,3 +56,4 @@ target/
 *.dat
 *.png
 client_secrets.json
+*.json

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """ Base module for Parsing events """
 from __future__ import (absolute_import, division, print_function, unicode_literals)
 import os
@@ -270,10 +270,10 @@ def parse_events(parser_callback=None,
                     remove_dict[ev_key] = existing_events[ev_key]
         if new_events:
             with gzip.open('.tmp_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(new_events.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump([x for x in new_events.values()], pkl_file, pickle.HIGHEST_PROTOCOL)
         if remove_dict:
             with gzip.open('.tmp_rm_%s.pkl.gz' % script_name, 'wb') as pkl_file:
-                pickle.dump(remove_dict.values(), pkl_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump([x for x in remove_dict.values()], pkl_file, pickle.HIGHEST_PROTOCOL)
     if command_ == 'post':
         new_events = []
         remove_events = defaultdict(list)

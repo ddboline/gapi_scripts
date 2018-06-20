@@ -9,8 +9,6 @@ from hangups_common import run_example
 
 default_conversation = 'Ugw8V3Is1qGIG8M3Yg54AaABAQ'
 
-default_conversation
-
 
 @asyncio.coroutine
 def send_message(client, args):

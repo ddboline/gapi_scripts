@@ -32,8 +32,6 @@ def run_example(example_coroutine, *extra_args):
     except KeyboardInterrupt:
         task.cancel()
         loop.run_forever()
-    finally:
-        loop.close()
 
 
 def _get_parser(extra_args):
